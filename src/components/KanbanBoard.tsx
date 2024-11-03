@@ -101,6 +101,14 @@ const dropAnimation: DropAnimation = {
 
 type Items = Record<UniqueIdentifier, UniqueIdentifier[]>;
 
+interface MovedItemState {
+  itemId: UniqueIdentifier;
+  newIndex: number;
+  sourceColumnId: UniqueIdentifier;
+  targetColumnId: UniqueIdentifier;
+  hasEnded: boolean;
+}
+
 interface Props {
   adjustScale?: boolean;
   cancelDrop?: CancelDrop;
@@ -117,6 +125,7 @@ interface Props {
     isDragOverlay: boolean;
   }): React.CSSProperties;
   wrapperStyle?(args: { index: number }): React.CSSProperties;
+  onItemMove(result: MovedItemState): void;
   itemCount?: number;
   items?: Items;
   handle?: boolean;
@@ -151,6 +160,7 @@ export function KanbanBoard({
   trashable = false,
   vertical = false,
   scrollable,
+  onItemMove,
 }: Props) {
   const [items, setItems] = useState<Items>(
     () =>
@@ -161,6 +171,7 @@ export function KanbanBoard({
         D: createRange(itemCount, (index) => `D${index + 1}`),
       }
   );
+  const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(null);
   const [containers, setContainers] = useState(Object.keys(items) as UniqueIdentifier[]);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const lastOverId = useRef<UniqueIdentifier | null>(null);
@@ -278,6 +289,12 @@ export function KanbanBoard({
     });
   }, [items]);
 
+  useEffect(() => {
+    if (movedItemState && movedItemState.hasEnded) {
+      onItemMove(movedItemState);
+    }
+  }, [movedItemState, onItemMove]);
+
   return (
     <DndContext
       sensors={sensors}
@@ -290,6 +307,16 @@ export function KanbanBoard({
       onDragStart={({ active }) => {
         setActiveId(active.id);
         setClonedItems(items);
+        const activeContainer = findContainer(active.id);
+        if (activeContainer) {
+          setMovedItemState({
+            itemId: "",
+            targetColumnId: "",
+            newIndex: 0,
+            sourceColumnId: activeContainer,
+            hasEnded: false,
+          });
+        }
       }}
       onDragOver={({ active, over }) => {
         const overId = over?.id;
@@ -306,39 +333,47 @@ export function KanbanBoard({
         }
 
         if (activeContainer !== overContainer) {
-          setItems((items) => {
-            const activeItems = items[activeContainer];
-            const overItems = items[overContainer];
-            const overIndex = overItems.indexOf(overId);
-            const activeIndex = activeItems.indexOf(active.id);
+          const activeItems = items[activeContainer];
+          const overItems = items[overContainer];
+          const overIndex = overItems.indexOf(overId);
+          const activeIndex = activeItems.indexOf(active.id);
 
-            let newIndex: number;
+          let newIndex: number;
 
-            if (overId in items) {
-              newIndex = overItems.length + 1;
-            } else {
-              const isBelowOverItem =
-                over &&
-                active.rect.current.translated &&
-                active.rect.current.translated.top > over.rect.top + over.rect.height;
+          if (overId in items) {
+            newIndex = overItems.length + 1;
+          } else {
+            const isBelowOverItem =
+              over &&
+              active.rect.current.translated &&
+              active.rect.current.translated.top > over.rect.top + over.rect.height;
 
-              const modifier = isBelowOverItem ? 1 : 0;
+            const modifier = isBelowOverItem ? 1 : 0;
 
-              newIndex = overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
-            }
+            newIndex = overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
+          }
 
-            recentlyMovedToNewContainer.current = true;
+          recentlyMovedToNewContainer.current = true;
 
-            return {
-              ...items,
-              [activeContainer]: items[activeContainer].filter((item) => item !== active.id),
-              [overContainer]: [
-                ...items[overContainer].slice(0, newIndex),
-                items[activeContainer][activeIndex],
-                ...items[overContainer].slice(newIndex, items[overContainer].length),
-              ],
-            };
-          });
+          setMovedItemState(
+            (cs) =>
+              cs && {
+                ...cs,
+                itemId: active.id,
+                targetColumnId: overContainer,
+                newIndex,
+              }
+          );
+
+          setItems((items) => ({
+            ...items,
+            [activeContainer]: items[activeContainer].filter((item) => item !== active.id),
+            [overContainer]: [
+              ...items[overContainer].slice(0, newIndex),
+              items[activeContainer][activeIndex],
+              ...items[overContainer].slice(newIndex, items[overContainer].length),
+            ],
+          }));
         }
       }}
       onDragEnd={({ active, over }) => {
@@ -349,6 +384,7 @@ export function KanbanBoard({
 
             return arrayMove(containers, activeIndex, overIndex);
           });
+          return;
         }
 
         const activeContainer = findContainer(active.id);
@@ -396,11 +432,34 @@ export function KanbanBoard({
           const overIndex = items[overContainer].indexOf(overId);
 
           if (activeIndex !== overIndex) {
+            setMovedItemState(
+              (cs) =>
+                cs && {
+                  ...cs,
+                  itemId: active.id,
+                  newIndex: overIndex,
+                  targetColumnId: overContainer,
+                  hasEnded: true,
+                }
+            );
+
             setItems((items) => ({
               ...items,
               [overContainer]: arrayMove(items[overContainer], activeIndex, overIndex),
             }));
+
+            return;
           }
+
+          // It applies when an item is moved from one column to another but, for
+          // some reason, keeps the same index it had on the previous column:
+          setMovedItemState(
+            (cs) =>
+              cs && {
+                ...cs,
+                hasEnded: true,
+              }
+          );
         }
 
         setActiveId(null);
