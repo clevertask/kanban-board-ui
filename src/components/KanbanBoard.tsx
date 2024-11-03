@@ -126,6 +126,7 @@ interface Props {
   }): React.CSSProperties;
   wrapperStyle?(args: { index: number }): React.CSSProperties;
   onItemMove(result: MovedItemState): void;
+  onColumnMove?(result: { newIndex: number; columnId: UniqueIdentifier }): void;
   itemCount?: number;
   items?: Items;
   handle?: boolean;
@@ -147,7 +148,7 @@ export function KanbanBoard({
   itemCount = 3,
   cancelDrop,
   columns,
-  handle = false,
+  handle = true,
   items: initialItems,
   containerStyle,
   coordinateGetter = multipleContainersCoordinateGetter,
@@ -161,6 +162,7 @@ export function KanbanBoard({
   vertical = false,
   scrollable,
   onItemMove,
+  onColumnMove,
 }: Props) {
   const [items, setItems] = useState<Items>(
     () =>
@@ -378,12 +380,10 @@ export function KanbanBoard({
       }}
       onDragEnd={({ active, over }) => {
         if (active.id in items && over?.id) {
-          setContainers((containers) => {
-            const activeIndex = containers.indexOf(active.id);
-            const overIndex = containers.indexOf(over.id);
-
-            return arrayMove(containers, activeIndex, overIndex);
-          });
+          const activeIndex = containers.indexOf(active.id);
+          const overIndex = containers.indexOf(over.id);
+          onColumnMove?.({ newIndex: overIndex, columnId: active.id });
+          setContainers((containers) => arrayMove(containers, activeIndex, overIndex));
           return;
         }
 
