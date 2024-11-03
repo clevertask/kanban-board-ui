@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { KanbanBoard } from "../components/KanbanBoard";
 
 function App() {
-  return <KanbanBoard handle onItemMove={(v) => console.log(v)} trashable />;
+  return <KanbanBoard onItemMove={(v) => console.log(v)} onColumnMove={(v) => console.log(v)} />;
 }
 
 createRoot(document.getElementById("root")!).render(
