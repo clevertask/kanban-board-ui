@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal, unstable_batchedUpdates } from "react-dom";
 import {
   CancelDrop,
@@ -36,7 +36,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { coordinateGetter as multipleContainersCoordinateGetter } from "../utils/multipleContainerKeyboardCoordinates";
 import { Item } from "./Item";
 import { Container, ContainerProps } from "./Container";
-import { createRange } from "../utils/createRange";
 
 const animateLayoutChanges: AnimateLayoutChanges = (args) =>
   defaultAnimateLayoutChanges({ ...args, wasDragging: true });
@@ -99,7 +98,9 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
-type Items = Record<UniqueIdentifier, UniqueIdentifier[]>;
+export type DataItem = { id: string; name: string };
+export type Data = { id: string; name: string; items: DataItem[] }[];
+export type Items = Record<UniqueIdentifier, UniqueIdentifier[]>;
 
 interface MovedItemState {
   itemId: UniqueIdentifier;
@@ -128,7 +129,7 @@ interface Props {
   onItemMove(result: MovedItemState): void;
   onColumnMove?(result: { newIndex: number; columnId: UniqueIdentifier }): void;
   itemCount?: number;
-  items?: Items;
+  data: Data;
   handle?: boolean;
   renderItem?: any;
   strategy?: SortingStrategy;
@@ -145,11 +146,10 @@ const empty: UniqueIdentifier[] = [];
 
 export function KanbanBoard({
   adjustScale = false,
-  itemCount = 3,
   cancelDrop,
   columns,
   handle = true,
-  items: initialItems,
+  data,
   containerStyle,
   coordinateGetter = multipleContainersCoordinateGetter,
   getItemStyles = () => ({}),
@@ -164,21 +164,36 @@ export function KanbanBoard({
   onItemMove,
   onColumnMove,
 }: Props) {
-  const [items, setItems] = useState<Items>(
-    () =>
-      initialItems ?? {
-        A: createRange(itemCount, (index) => `A${index + 1}`),
-        B: createRange(itemCount, (index) => `B${index + 1}`),
-        C: createRange(itemCount, (index) => `C${index + 1}`),
-        D: createRange(itemCount, (index) => `D${index + 1}`),
-      }
-  );
+  const getColumnMap = useCallback(() => {
+    const map: Record<string, string[]> = {};
+    data.forEach((column) => {
+      map[column.id] = column.items.map((item) => item.id);
+    });
+    return map;
+  }, [data]);
+
+  const itemMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    data.forEach((column) => {
+      map[column.id] = column.name;
+      column.items.forEach((item) => {
+        map[item.id] = item.name;
+      });
+    });
+    return map;
+  }, [data]);
+
+  const [items, setItems] = useState<Items>(() => getColumnMap());
   const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(null);
   const [containers, setContainers] = useState(Object.keys(items) as UniqueIdentifier[]);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const lastOverId = useRef<UniqueIdentifier | null>(null);
   const recentlyMovedToNewContainer = useRef(false);
   const isSortingContainer = activeId ? containers.includes(activeId) : false;
+
+  useEffect(() => {
+    setItems(() => getColumnMap());
+  }, [data, getColumnMap]);
 
   /**
    * Custom collision detection strategy optimized for multiple containers
@@ -484,7 +499,7 @@ export function KanbanBoard({
             <DroppableContainer
               key={containerId}
               id={containerId}
-              label={minimal ? undefined : `Column ${containerId}`}
+              label={itemMap[containerId]}
               columns={columns}
               items={items[containerId]}
               scrollable={scrollable}
@@ -499,6 +514,7 @@ export function KanbanBoard({
                       disabled={isSortingContainer}
                       key={value}
                       id={value}
+                      content={itemMap[value]}
                       index={index}
                       handle={handle}
                       style={getItemStyles}
@@ -544,6 +560,7 @@ export function KanbanBoard({
       <Item
         value={id}
         handle={handle}
+        content={itemMap[id]}
         style={getItemStyles({
           containerId: findContainer(id) as UniqueIdentifier,
           overIndex: -1,
@@ -564,7 +581,7 @@ export function KanbanBoard({
   function renderContainerDragOverlay(containerId: UniqueIdentifier) {
     return (
       <Container
-        label={`Column ${containerId}`}
+        label={itemMap[containerId]}
         columns={columns}
         style={{
           height: "100%",
@@ -576,6 +593,7 @@ export function KanbanBoard({
           <Item
             key={item}
             value={item}
+            content={itemMap[item]}
             handle={handle}
             style={getItemStyles({
               containerId,
@@ -667,6 +685,7 @@ interface SortableItemProps {
   id: UniqueIdentifier;
   index: number;
   handle: boolean;
+  content: string;
   disabled?: boolean;
   style(args: any): React.CSSProperties;
   getIndex(id: UniqueIdentifier): number;
@@ -684,6 +703,7 @@ function SortableItem({
   containerId,
   getIndex,
   wrapperStyle,
+  content,
 }: SortableItemProps) {
   const { setNodeRef, setActivatorNodeRef, listeners, isDragging, isSorting, over, overIndex, transform, transition } =
     useSortable({
@@ -696,6 +716,7 @@ function SortableItem({
     <Item
       ref={disabled ? undefined : setNodeRef}
       value={id}
+      content={content}
       dragging={isDragging}
       sorting={isSorting}
       handle={handle}
