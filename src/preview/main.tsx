@@ -22,7 +22,7 @@ function App() {
 
   return (
     <>
-      <KanbanBoard data={items} onItemMove={(v) => console.log(v)} onColumnMove={(v) => console.log(v)} minimal />
+      <KanbanBoard data={items} onItemMove={(v) => console.log(v)} onColumnMove={(v) => console.log(v)} />
       <button onClick={addNewItemToColumn}>Add item to column externally</button>
     </>
   );
