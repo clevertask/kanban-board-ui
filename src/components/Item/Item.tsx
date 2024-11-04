@@ -1,11 +1,11 @@
-import React, {useEffect} from 'react';
-import classNames from 'classnames';
-import type {DraggableSyntheticListeners} from '@dnd-kit/core';
-import type {Transform} from '@dnd-kit/utilities';
+import React, { useEffect } from "react";
+import classNames from "classnames";
+import type { DraggableSyntheticListeners } from "@dnd-kit/core";
+import type { Transform } from "@dnd-kit/utilities";
 
-import {Handle, Remove} from './components';
+import { Handle, Remove } from "./components";
 
-import styles from './Item.module.css';
+import styles from "./Item.module.css";
 
 export interface Props {
   dragOverlay?: boolean;
@@ -24,8 +24,10 @@ export interface Props {
   transition?: string | null;
   wrapperStyle?: React.CSSProperties;
   value: React.ReactNode;
+  content: string;
   onRemove?(): void;
   renderItem?(args: {
+    content: string;
     dragOverlay: boolean;
     dragging: boolean;
     sorting: boolean;
@@ -34,9 +36,9 @@ export interface Props {
     listeners: DraggableSyntheticListeners;
     ref: React.Ref<HTMLElement>;
     style: React.CSSProperties | undefined;
-    transform: Props['transform'];
-    transition: Props['transition'];
-    value: Props['value'];
+    transform: Props["transform"];
+    transition: Props["transition"];
+    value: Props["value"];
   }): React.ReactElement;
 }
 
@@ -62,6 +64,7 @@ export const Item = React.memo(
         transform,
         value,
         wrapperStyle,
+        content,
         ...props
       },
       ref
@@ -71,10 +74,10 @@ export const Item = React.memo(
           return;
         }
 
-        document.body.style.cursor = 'grabbing';
+        document.body.style.cursor = "grabbing";
 
         return () => {
-          document.body.style.cursor = '';
+          document.body.style.cursor = "";
         };
       }, [dragOverlay]);
 
@@ -91,6 +94,7 @@ export const Item = React.memo(
           transform,
           transition,
           value,
+          content,
         })
       ) : (
         <li
@@ -103,23 +107,13 @@ export const Item = React.memo(
           style={
             {
               ...wrapperStyle,
-              transition: [transition, wrapperStyle?.transition]
-                .filter(Boolean)
-                .join(', '),
-              '--translate-x': transform
-                ? `${Math.round(transform.x)}px`
-                : undefined,
-              '--translate-y': transform
-                ? `${Math.round(transform.y)}px`
-                : undefined,
-              '--scale-x': transform?.scaleX
-                ? `${transform.scaleX}`
-                : undefined,
-              '--scale-y': transform?.scaleY
-                ? `${transform.scaleY}`
-                : undefined,
-              '--index': index,
-              '--color': color,
+              transition: [transition, wrapperStyle?.transition].filter(Boolean).join(", "),
+              "--translate-x": transform ? `${Math.round(transform.x)}px` : undefined,
+              "--translate-y": transform ? `${Math.round(transform.y)}px` : undefined,
+              "--scale-x": transform?.scaleX ? `${transform.scaleX}` : undefined,
+              "--scale-y": transform?.scaleY ? `${transform.scaleY}` : undefined,
+              "--index": index,
+              "--color": color,
             } as React.CSSProperties
           }
           ref={ref}
@@ -139,11 +133,9 @@ export const Item = React.memo(
             {...props}
             tabIndex={!handle ? 0 : undefined}
           >
-            {value}
+            {content}
             <span className={styles.Actions}>
-              {onRemove ? (
-                <Remove className={styles.Remove} onClick={onRemove} />
-              ) : null}
+              {onRemove ? <Remove className={styles.Remove} onClick={onRemove} /> : null}
               {handle ? <Handle {...handleProps} {...listeners} /> : null}
             </span>
           </div>
