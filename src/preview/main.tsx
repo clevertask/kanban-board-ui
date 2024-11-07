@@ -1,11 +1,11 @@
 import { StrictMode, useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Items, KanbanBoard, TOnAddColumnArgs } from "../components/KanbanBoard";
+import { Columns, KanbanBoard, TOnAddColumnArgs } from "../components/KanbanBoard";
 import { removeColumnItem, updateColumnItems } from "../utils/item-state-mutations";
 import { UniqueIdentifier } from "@dnd-kit/core";
 
 function App() {
-  const [items, setItems] = useState<Items>([
+  const [columns, setColumns] = useState<Columns>([
     {
       id: "1",
       name: "A",
@@ -19,35 +19,35 @@ function App() {
   ]);
 
   const addNewItemToColumn = useCallback(() => {
-    const updateItems = updateColumnItems(items, "1", (ci) => [
+    const updateItems = updateColumnItems(columns, "1", (ci) => [
       ...ci,
       { id: Math.random().toString(), name: Math.random().toString() },
     ]);
-    setItems(updateItems);
-  }, [items]);
+    setColumns(updateItems);
+  }, [columns]);
 
   const handleOnAddColumn = (data: TOnAddColumnArgs) => {
     if (data && data.item) {
-      const updatedItems = removeColumnItem(items, data.fromContainer, data.item.id);
-      setItems(() => [
+      const updatedItems = removeColumnItem(columns, data.fromContainer, data.item.id);
+      setColumns(() => [
         ...updatedItems,
         { id: Math.random().toString(), name: Math.random().toString(), items: [data.item!] },
       ]);
     } else {
-      setItems((ci) => [...ci, { id: Math.random().toString(), name: Math.random().toString(), items: [] }]);
+      setColumns((ci) => [...ci, { id: Math.random().toString(), name: Math.random().toString(), items: [] }]);
     }
   };
 
   const handleItemRemoval = (result: { itemId: UniqueIdentifier; fromContainer: UniqueIdentifier }) => {
-    const updatedItems = removeColumnItem(items, result.fromContainer, result.itemId);
-    setItems(updatedItems);
+    const updatedItems = removeColumnItem(columns, result.fromContainer, result.itemId);
+    setColumns(updatedItems);
   };
 
   return (
     <>
       <KanbanBoard
-        items={items}
-        setItems={setItems}
+        columns={columns}
+        setColumns={setColumns}
         onColumnEdit={console.log}
         onItemMove={(v) => console.log(v)}
         onColumnMove={(v) => console.log(v)}
