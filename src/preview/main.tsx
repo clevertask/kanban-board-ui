@@ -2,6 +2,7 @@ import { StrictMode, useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Items, KanbanBoard, TOnAddColumnArgs } from "../components/KanbanBoard";
 import { removeColumnItem, updateColumnItems } from "../utils/item-state-mutations";
+import { UniqueIdentifier } from "@dnd-kit/core";
 
 function App() {
   const [items, setItems] = useState<Items>([
@@ -37,6 +38,11 @@ function App() {
     }
   };
 
+  const handleItemRemoval = (result: { itemId: UniqueIdentifier; fromContainer: UniqueIdentifier }) => {
+    const updatedItems = removeColumnItem(items, result.fromContainer, result.itemId);
+    setItems(updatedItems);
+  };
+
   return (
     <>
       <KanbanBoard
@@ -46,6 +52,8 @@ function App() {
         onItemMove={(v) => console.log(v)}
         onColumnMove={(v) => console.log(v)}
         onAddColumn={handleOnAddColumn}
+        trashable
+        onItemRemove={handleItemRemoval}
       />
       <button onClick={addNewItemToColumn}>Add item to column externally</button>
     </>
