@@ -1,14 +1,19 @@
 import { StrictMode, useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Data, KanbanBoard } from "../components/KanbanBoard";
+import { Items, KanbanBoard } from "../components/KanbanBoard";
 import { updateColumnItems } from "../utils/item-state-mutations";
 
 function App() {
-  const [items, setItems] = useState<Data>([
+  const [items, setItems] = useState<Items>([
     {
       id: "1",
       name: "A",
       items: [{ id: "12", name: "A2" }],
+    },
+    {
+      id: "21",
+      name: "A2212",
+      items: [{ id: "12asdasda", name: "asA2" }],
     },
   ]);
 
@@ -20,9 +25,16 @@ function App() {
     setItems(updateItems);
   }, [items]);
 
+  console.log(items);
+
   return (
     <>
-      <KanbanBoard data={items} onItemMove={(v) => console.log(v)} onColumnMove={(v) => console.log(v)} />
+      <KanbanBoard
+        items={items}
+        setItems={setItems}
+        onItemMove={(v) => console.log(v)}
+        onColumnMove={(v) => console.log(v)}
+      />
       <button onClick={addNewItemToColumn}>Add item to column externally</button>
     </>
   );
