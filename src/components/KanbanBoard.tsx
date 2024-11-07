@@ -101,15 +101,15 @@ const dropAnimation: DropAnimation = {
 export type DataItem = { id: UniqueIdentifier; name: string };
 export type Items = { id: UniqueIdentifier; name: string; items: DataItem[] }[];
 export type TOnAddColumnArgs = { item: DataItem | null; fromContainer: UniqueIdentifier } | null;
-interface MovedItemState {
+export type TOnItemRemoveArgs = { itemId: UniqueIdentifier; fromContainer: UniqueIdentifier };
+export interface MovedItemState {
   itemId: UniqueIdentifier;
   newIndex: number;
   sourceColumnId: UniqueIdentifier;
   targetColumnId: UniqueIdentifier;
   hasEnded: boolean;
 }
-
-interface Props {
+export interface Props {
   adjustScale?: boolean;
   cancelDrop?: CancelDrop;
   columns?: number;
@@ -138,6 +138,7 @@ interface Props {
   modifiers?: Modifiers;
   minimal?: boolean;
   trashable?: boolean;
+  onItemRemove?(result: TOnItemRemoveArgs): void;
   scrollable?: boolean;
   vertical?: boolean;
 }
@@ -162,6 +163,7 @@ export function KanbanBoard({
   renderItem,
   strategy = verticalListSortingStrategy,
   trashable = false,
+  onItemRemove,
   vertical = false,
   scrollable,
   onItemMove,
@@ -432,24 +434,16 @@ export function KanbanBoard({
         }
 
         if (overId === TRASH_ID) {
-          setItems((prevItems) =>
-            prevItems.map((column) => {
-              if (column.id === activeContainer) {
-                return {
-                  ...column,
-                  items: column.items.filter((item) => item.id !== activeId),
-                };
-              }
-              return column;
-            })
-          );
-
+          if (activeId) {
+            onItemRemove?.({ itemId: activeId, fromContainer: activeContainer });
+          }
           setActiveId(null);
           return;
         }
 
         if (overId === PLACEHOLDER_ID) {
           onAddColumn?.({ item: findItem(active.id), fromContainer: activeContainer });
+          setActiveId(null);
           return;
         }
 
@@ -496,7 +490,7 @@ export function KanbanBoard({
                 return item;
               })
             );
-
+            setActiveId(null);
             return;
           }
 
