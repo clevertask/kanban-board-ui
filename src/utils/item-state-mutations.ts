@@ -1,6 +1,11 @@
-import { Data, DataItem } from "../components/KanbanBoard";
+import { UniqueIdentifier } from "@dnd-kit/core";
+import { Items, DataItem } from "../components/KanbanBoard";
 
-export function updateColumnItems(items: Data, columnId: string, updateFn: (currentState: DataItem[]) => DataItem[]) {
+export function updateColumnItems(
+  items: Items,
+  columnId: UniqueIdentifier,
+  updateFn: (currentState: DataItem[]) => DataItem[]
+) {
   return items.map((column) => {
     if (column.id === columnId) {
       return {
@@ -12,7 +17,7 @@ export function updateColumnItems(items: Data, columnId: string, updateFn: (curr
   });
 }
 
-export function removeColumnItem(items: Data, columnId: string, itemId: string) {
+export function removeColumnItem(items: Items, columnId: UniqueIdentifier, itemId: UniqueIdentifier) {
   return items.map((column) => {
     if (column.id === columnId) {
       return {
@@ -24,11 +29,11 @@ export function removeColumnItem(items: Data, columnId: string, itemId: string) 
   });
 }
 
-export function removeColumn(items: Data, columnId: string) {
+export function removeColumn(items: Items, columnId: UniqueIdentifier) {
   return items.filter((column) => column.id !== columnId);
 }
 
-export function updateColumnName(items: Data, columnId: string, newName: string) {
+export function updateColumnName(items: Items, columnId: UniqueIdentifier, newName: string) {
   return items.map((column) => {
     if (column.id === columnId) {
       return {

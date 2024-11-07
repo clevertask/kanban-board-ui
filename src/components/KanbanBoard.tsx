@@ -98,9 +98,9 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
-export type DataItem = { id: string; name: string };
-export type Items = { id: string; name: string; items: DataItem[] }[];
-
+export type DataItem = { id: UniqueIdentifier; name: string };
+export type Items = { id: UniqueIdentifier; name: string; items: DataItem[] }[];
+export type TOnAddColumnArgs = { item: DataItem | null; fromContainer: UniqueIdentifier } | null;
 interface MovedItemState {
   itemId: UniqueIdentifier;
   newIndex: number;
@@ -127,6 +127,7 @@ interface Props {
   wrapperStyle?(args: { index: number }): React.CSSProperties;
   onItemMove(result: MovedItemState): void;
   onColumnMove?(result: { newIndex: number; columnId: UniqueIdentifier }): void;
+  onAddColumn?(item: TOnAddColumnArgs): void;
   itemCount?: number;
   items: Items;
   setItems: Dispatch<SetStateAction<Items>>;
@@ -164,6 +165,7 @@ export function KanbanBoard({
   scrollable,
   onItemMove,
   onColumnMove,
+  onAddColumn,
 }: Props) {
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(null);
@@ -247,6 +249,17 @@ export function KanbanBoard({
       coordinateGetter,
     })
   );
+  const findItem = (id: UniqueIdentifier) => {
+    for (const column of items) {
+      const item = column.items.find((item) => item.id === id);
+      if (item) {
+        return item;
+      }
+    }
+
+    return null;
+  };
+
   const findContainer = (id: UniqueIdentifier) => {
     const column = items.find((i) => i.id === id);
     if (column) {
@@ -434,17 +447,7 @@ export function KanbanBoard({
         }
 
         if (overId === PLACEHOLDER_ID) {
-          const newContainerId = getNextContainerId();
-
-          // unstable_batchedUpdates(() => {
-          //   setContainers((containers) => [...containers, newContainerId]);
-          //   setItems((items) => ({
-          //     ...items,
-          //     [activeContainer]: items[activeContainer].filter((id) => id !== activeId),
-          //     [newContainerId]: [active.id],
-          //   }));
-          //   setActiveId(null);
-          // });
+          onAddColumn?.({ item: findItem(active.id), fromContainer: activeContainer });
           return;
         }
 
@@ -458,8 +461,12 @@ export function KanbanBoard({
 
           const overIndex = items
             .find((i) => i.id === overContainer)
-            .items.map((i) => i.id)
+            ?.items.map((i) => i.id)
             .indexOf(overId);
+
+          if (!activeIndex || !overIndex) {
+            return;
+          }
 
           if (activeIndex !== overIndex) {
             setMovedItemState(
@@ -476,10 +483,13 @@ export function KanbanBoard({
             setItems((items) =>
               items.map((item) => {
                 if (item.id === overContainer) {
-                  return {
-                    ...item,
-                    items: arrayMove(items.find((i) => i.id === overContainer)?.items, activeIndex, overIndex),
-                  };
+                  const currentContainerItems = items.find((i) => i.id === overContainer)?.items;
+                  if (currentContainerItems) {
+                    return {
+                      ...item,
+                      items: arrayMove(currentContainerItems, activeIndex, overIndex),
+                    };
+                  }
                 }
                 return item;
               })
@@ -642,22 +652,7 @@ export function KanbanBoard({
   }
 
   function handleAddColumn() {
-    const newContainerId = getNextContainerId();
-
-    unstable_batchedUpdates(() => {
-      setContainers((containers) => [...containers, newContainerId]);
-      setItems((items) => ({
-        ...items,
-        [newContainerId]: [],
-      }));
-    });
-  }
-
-  function getNextContainerId() {
-    const containerIds = Object.keys(items);
-    const lastContainerId = containerIds[containerIds.length - 1];
-
-    return String.fromCharCode(lastContainerId.charCodeAt(0) + 1);
+    onAddColumn?.(null);
   }
 }
 

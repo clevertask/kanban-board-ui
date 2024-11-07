@@ -1,7 +1,7 @@
 import { StrictMode, useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Items, KanbanBoard } from "../components/KanbanBoard";
-import { updateColumnItems } from "../utils/item-state-mutations";
+import { Items, KanbanBoard, TOnAddColumnArgs } from "../components/KanbanBoard";
+import { removeColumnItem, updateColumnItems } from "../utils/item-state-mutations";
 
 function App() {
   const [items, setItems] = useState<Items>([
@@ -25,7 +25,17 @@ function App() {
     setItems(updateItems);
   }, [items]);
 
-  console.log(items);
+  const handleOnAddColumn = (data: TOnAddColumnArgs) => {
+    if (data && data.item) {
+      const updatedItems = removeColumnItem(items, data.fromContainer, data.item.id);
+      setItems(() => [
+        ...updatedItems,
+        { id: Math.random().toString(), name: Math.random().toString(), items: [data.item!] },
+      ]);
+    } else {
+      setItems((ci) => [...ci, { id: Math.random().toString(), name: Math.random().toString(), items: [] }]);
+    }
+  };
 
   return (
     <>
@@ -34,6 +44,7 @@ function App() {
         setItems={setItems}
         onItemMove={(v) => console.log(v)}
         onColumnMove={(v) => console.log(v)}
+        onAddColumn={handleOnAddColumn}
       />
       <button onClick={addNewItemToColumn}>Add item to column externally</button>
     </>
