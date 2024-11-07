@@ -466,7 +466,7 @@ export function KanbanBoard({
             ?.items.map((i) => i.id)
             .indexOf(overId);
 
-          if (!activeIndex || !overIndex) {
+          if (activeIndex === undefined || overIndex === undefined) {
             return;
           }
 
