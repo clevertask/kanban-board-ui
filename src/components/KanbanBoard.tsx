@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal, unstable_batchedUpdates } from "react-dom";
 import {
   CancelDrop,
@@ -99,8 +99,7 @@ const dropAnimation: DropAnimation = {
 };
 
 export type DataItem = { id: string; name: string };
-export type Data = { id: string; name: string; items: DataItem[] }[];
-export type Items = Record<UniqueIdentifier, UniqueIdentifier[]>;
+export type Items = { id: string; name: string; items: DataItem[] }[];
 
 interface MovedItemState {
   itemId: UniqueIdentifier;
@@ -129,7 +128,8 @@ interface Props {
   onItemMove(result: MovedItemState): void;
   onColumnMove?(result: { newIndex: number; columnId: UniqueIdentifier }): void;
   itemCount?: number;
-  data: Data;
+  items: Items;
+  setItems: Dispatch<SetStateAction<Items>>;
   handle?: boolean;
   renderItem?: any;
   strategy?: SortingStrategy;
@@ -145,11 +145,12 @@ const PLACEHOLDER_ID = "placeholder";
 const empty: UniqueIdentifier[] = [];
 
 export function KanbanBoard({
+  items,
+  setItems,
   adjustScale = false,
   cancelDrop,
   columns,
   handle = true,
-  data,
   containerStyle,
   coordinateGetter = multipleContainersCoordinateGetter,
   getItemStyles = () => ({}),
@@ -164,36 +165,12 @@ export function KanbanBoard({
   onItemMove,
   onColumnMove,
 }: Props) {
-  const getColumnMap = useCallback(() => {
-    const map: Record<string, string[]> = {};
-    data.forEach((column) => {
-      map[column.id] = column.items.map((item) => item.id);
-    });
-    return map;
-  }, [data]);
-
-  const itemMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    data.forEach((column) => {
-      map[column.id] = column.name;
-      column.items.forEach((item) => {
-        map[item.id] = item.name;
-      });
-    });
-    return map;
-  }, [data]);
-
-  const [items, setItems] = useState<Items>(() => getColumnMap());
-  const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(null);
-  const [containers, setContainers] = useState(Object.keys(items) as UniqueIdentifier[]);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
-  const lastOverId = useRef<UniqueIdentifier | null>(null);
-  const recentlyMovedToNewContainer = useRef(false);
-  const isSortingContainer = activeId ? containers.includes(activeId) : false;
+  const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(null);
 
-  useEffect(() => {
-    setItems(() => getColumnMap());
-  }, [data, getColumnMap]);
+  const recentlyMovedToNewContainer = useRef(false);
+  const lastOverId = useRef<UniqueIdentifier | null>(null);
+  const isSortingContainer = activeId ? items.some(({ id }) => id === activeId) : false;
 
   /**
    * Custom collision detection strategy optimized for multiple containers
@@ -205,10 +182,12 @@ export function KanbanBoard({
    */
   const collisionDetectionStrategy: CollisionDetection = useCallback(
     (args) => {
-      if (activeId && activeId in items) {
+      if (activeId && items.some(({ id }) => activeId === id)) {
         return closestCenter({
           ...args,
-          droppableContainers: args.droppableContainers.filter((container) => container.id in items),
+          droppableContainers: args.droppableContainers.filter((container) =>
+            items.some(({ id }) => id === container.id)
+          ),
         });
       }
 
@@ -228,23 +207,22 @@ export function KanbanBoard({
           return intersections;
         }
 
-        if (overId in items) {
-          const containerItems = items[overId];
+        if (items.some(({ id }) => id === overId)) {
+          const containerItems = items.find(({ id }) => id === overId)?.items;
 
           // If a container is matched and it contains items (columns 'A', 'B', 'C')
-          if (containerItems.length > 0) {
+          if (containerItems && containerItems.length > 0) {
             // Return the closest droppable within that container
             overId = closestCenter({
               ...args,
               droppableContainers: args.droppableContainers.filter(
-                (container) => container.id !== overId && containerItems.includes(container.id)
+                (container) => container.id !== overId && containerItems.some(({ id }) => id === container.id)
               ),
             })[0]?.id;
           }
         }
 
         lastOverId.current = overId;
-
         return [{ id: overId }];
       }
 
@@ -270,23 +248,25 @@ export function KanbanBoard({
     })
   );
   const findContainer = (id: UniqueIdentifier) => {
-    if (id in items) {
-      return id;
+    const column = items.find((i) => i.id === id);
+    if (column) {
+      return column.id;
+    }
+    for (const column of items) {
+      if (column.items.some((item) => item.id === id)) {
+        return column.id;
+      }
     }
 
-    return Object.keys(items).find((key) => items[key].includes(id));
+    return null;
   };
 
   const getIndex = (id: UniqueIdentifier) => {
-    const container = findContainer(id);
+    const containerId = findContainer(id);
+    if (!containerId) return -1;
 
-    if (!container) {
-      return -1;
-    }
-
-    const index = items[container].indexOf(id);
-
-    return index;
+    const column = items.find((col) => col.id === containerId);
+    return column ? column.items.findIndex((item) => item.id === id) : -1;
   };
 
   const onDragCancel = () => {
@@ -337,8 +317,7 @@ export function KanbanBoard({
       }}
       onDragOver={({ active, over }) => {
         const overId = over?.id;
-
-        if (overId == null || overId === TRASH_ID || active.id in items) {
+        if (overId == null || overId === TRASH_ID || items.some(({ id }) => active.id === id)) {
           return;
         }
 
@@ -350,14 +329,22 @@ export function KanbanBoard({
         }
 
         if (activeContainer !== overContainer) {
-          const activeItems = items[activeContainer];
-          const overItems = items[overContainer];
-          const overIndex = overItems.indexOf(overId);
-          const activeIndex = activeItems.indexOf(active.id);
+          const activeColumn = items.find(({ id }) => id === activeContainer);
+          const overColumn = items.find(({ id }) => id === overContainer);
+
+          if (!activeColumn || !overColumn) {
+            return;
+          }
+
+          const activeItems = activeColumn.items;
+          const overItems = overColumn.items;
+
+          const overIndex = overItems.findIndex(({ id }) => id === overId);
+          const activeIndex = activeItems.findIndex(({ id }) => id === active.id);
 
           let newIndex: number;
 
-          if (overId in items) {
+          if (items.some((i) => i.id === overId)) {
             newIndex = overItems.length + 1;
           } else {
             const isBelowOverItem =
@@ -382,23 +369,36 @@ export function KanbanBoard({
               }
           );
 
-          setItems((items) => ({
-            ...items,
-            [activeContainer]: items[activeContainer].filter((item) => item !== active.id),
-            [overContainer]: [
-              ...items[overContainer].slice(0, newIndex),
-              items[activeContainer][activeIndex],
-              ...items[overContainer].slice(newIndex, items[overContainer].length),
-            ],
-          }));
+          // Update the items array in an array-based structure
+          setItems((prevItems) => {
+            const updatedItems = prevItems.map((column) => {
+              if (column.id === activeContainer) {
+                return {
+                  ...column,
+                  items: column.items.filter((item) => item.id !== active.id),
+                };
+              } else if (column.id === overContainer) {
+                const newItems = [...overItems];
+                const [movedItem] = activeItems.splice(activeIndex, 1);
+                newItems.splice(newIndex, 0, movedItem);
+                return {
+                  ...column,
+                  items: newItems,
+                };
+              }
+              return column;
+            });
+            return updatedItems;
+          });
         }
       }}
       onDragEnd={({ active, over }) => {
-        if (active.id in items && over?.id) {
-          const activeIndex = containers.indexOf(active.id);
-          const overIndex = containers.indexOf(over.id);
+        if (items.some((i) => i.id === active.id) && over?.id) {
+          const activeIndex = items.map(({ id }) => id).indexOf(active.id);
+          const overIndex = items.map(({ id }) => id).indexOf(over.id);
+
           onColumnMove?.({ newIndex: overIndex, columnId: active.id });
-          setContainers((containers) => arrayMove(containers, activeIndex, overIndex));
+          setItems((containers) => arrayMove(containers, activeIndex, overIndex));
           return;
         }
 
@@ -417,10 +417,18 @@ export function KanbanBoard({
         }
 
         if (overId === TRASH_ID) {
-          setItems((items) => ({
-            ...items,
-            [activeContainer]: items[activeContainer].filter((id) => id !== activeId),
-          }));
+          setItems((prevItems) =>
+            prevItems.map((column) => {
+              if (column.id === activeContainer) {
+                return {
+                  ...column,
+                  items: column.items.filter((item) => item.id !== activeId),
+                };
+              }
+              return column;
+            })
+          );
+
           setActiveId(null);
           return;
         }
@@ -428,23 +436,30 @@ export function KanbanBoard({
         if (overId === PLACEHOLDER_ID) {
           const newContainerId = getNextContainerId();
 
-          unstable_batchedUpdates(() => {
-            setContainers((containers) => [...containers, newContainerId]);
-            setItems((items) => ({
-              ...items,
-              [activeContainer]: items[activeContainer].filter((id) => id !== activeId),
-              [newContainerId]: [active.id],
-            }));
-            setActiveId(null);
-          });
+          // unstable_batchedUpdates(() => {
+          //   setContainers((containers) => [...containers, newContainerId]);
+          //   setItems((items) => ({
+          //     ...items,
+          //     [activeContainer]: items[activeContainer].filter((id) => id !== activeId),
+          //     [newContainerId]: [active.id],
+          //   }));
+          //   setActiveId(null);
+          // });
           return;
         }
 
         const overContainer = findContainer(overId);
 
         if (overContainer) {
-          const activeIndex = items[activeContainer].indexOf(active.id);
-          const overIndex = items[overContainer].indexOf(overId);
+          const activeIndex = items
+            .find((i) => i.id === activeContainer)
+            ?.items.map((i) => i.id)
+            .indexOf(active.id);
+
+          const overIndex = items
+            .find((i) => i.id === overContainer)
+            .items.map((i) => i.id)
+            .indexOf(overId);
 
           if (activeIndex !== overIndex) {
             setMovedItemState(
@@ -458,10 +473,17 @@ export function KanbanBoard({
                 }
             );
 
-            setItems((items) => ({
-              ...items,
-              [overContainer]: arrayMove(items[overContainer], activeIndex, overIndex),
-            }));
+            setItems((items) =>
+              items.map((item) => {
+                if (item.id === overContainer) {
+                  return {
+                    ...item,
+                    items: arrayMove(items.find((i) => i.id === overContainer)?.items, activeIndex, overIndex),
+                  };
+                }
+                return item;
+              })
+            );
 
             return;
           }
@@ -492,29 +514,29 @@ export function KanbanBoard({
         }}
       >
         <SortableContext
-          items={[...containers, PLACEHOLDER_ID]}
+          items={[...items, PLACEHOLDER_ID]}
           strategy={vertical ? verticalListSortingStrategy : horizontalListSortingStrategy}
         >
-          {containers.map((containerId) => (
+          {items.map(({ id: containerId, name, items }) => (
             <DroppableContainer
               key={containerId}
               id={containerId}
-              label={itemMap[containerId]}
+              label={name}
               columns={columns}
-              items={items[containerId]}
+              items={items.map((i) => i.id)}
               scrollable={scrollable}
               style={containerStyle}
               unstyled={minimal}
               onRemove={() => handleRemove(containerId)}
             >
-              <SortableContext items={items[containerId]} strategy={strategy}>
-                {items[containerId].map((value, index) => {
+              <SortableContext items={items} strategy={strategy}>
+                {items.map(({ id: value, name }, index) => {
                   return (
                     <SortableItem
                       disabled={isSortingContainer}
                       key={value}
                       id={value}
-                      content={itemMap[value]}
+                      content={name}
                       index={index}
                       handle={handle}
                       style={getItemStyles}
@@ -544,14 +566,14 @@ export function KanbanBoard({
       {createPortal(
         <DragOverlay adjustScale={adjustScale} dropAnimation={dropAnimation}>
           {activeId
-            ? containers.includes(activeId)
+            ? items.some((c) => c.id === activeId)
               ? renderContainerDragOverlay(activeId)
               : renderSortableItemDragOverlay(activeId)
             : null}
         </DragOverlay>,
         document.body
       )}
-      {trashable && activeId && !containers.includes(activeId) ? <Trash id={TRASH_ID} /> : null}
+      {trashable && activeId && !items.some((c) => c.id === activeId) ? <Trash id={TRASH_ID} /> : null}
     </DndContext>
   );
 
@@ -560,7 +582,7 @@ export function KanbanBoard({
       <Item
         value={id}
         handle={handle}
-        content={itemMap[id]}
+        content={items.find((i) => i.id === findContainer(id))?.items.find(({ id: _id }) => _id === id)?.name || ""}
         style={getItemStyles({
           containerId: findContainer(id) as UniqueIdentifier,
           overIndex: -1,
@@ -581,7 +603,7 @@ export function KanbanBoard({
   function renderContainerDragOverlay(containerId: UniqueIdentifier) {
     return (
       <Container
-        label={itemMap[containerId]}
+        label={items.find((i) => i.id === containerId)?.name || ""}
         columns={columns}
         style={{
           height: "100%",
@@ -589,26 +611,28 @@ export function KanbanBoard({
         shadow
         unstyled={false}
       >
-        {items[containerId].map((item, index) => (
-          <Item
-            key={item}
-            value={item}
-            content={itemMap[item]}
-            handle={handle}
-            style={getItemStyles({
-              containerId,
-              overIndex: -1,
-              index: getIndex(item),
-              value: item,
-              isDragging: false,
-              isSorting: false,
-              isDragOverlay: false,
-            })}
-            color={getColor(item)}
-            wrapperStyle={wrapperStyle({ index })}
-            renderItem={renderItem}
-          />
-        ))}
+        {items
+          .find((i) => i.id === containerId)
+          ?.items.map(({ id: item, name }, index) => (
+            <Item
+              key={item}
+              value={item}
+              content={name}
+              handle={handle}
+              style={getItemStyles({
+                containerId,
+                overIndex: -1,
+                index: getIndex(item),
+                value: item,
+                isDragging: false,
+                isSorting: false,
+                isDragOverlay: false,
+              })}
+              color={getColor(item)}
+              wrapperStyle={wrapperStyle({ index })}
+              renderItem={renderItem}
+            />
+          ))}
       </Container>
     );
   }
