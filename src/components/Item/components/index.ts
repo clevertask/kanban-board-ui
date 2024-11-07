@@ -1,4 +1,4 @@
-export {Action} from './Action';
-export {Handle} from './Handle';
-export {Remove} from './Remove';
-export {Add} from './Add';
+export { Action } from "./Action";
+export { Handle } from "./Handle";
+export { Edit } from "./Edit";
+export { Add } from "./Add";

@@ -1,9 +1,9 @@
-import React, {forwardRef} from 'react';
-import classNames from 'classnames';
+import React, { forwardRef } from "react";
+import classNames from "classnames";
 
-import {Handle, Remove} from '../Item';
+import { Handle, Edit } from "../Item";
 
-import styles from './Container.module.css';
+import styles from "./Container.module.css";
 
 export interface Props {
   children: React.ReactNode;
@@ -18,7 +18,7 @@ export interface Props {
   placeholder?: boolean;
   unstyled?: boolean;
   onClick?(): void;
-  onRemove?(): void;
+  onEdit?(): void;
 }
 
 export const Container = forwardRef<HTMLDivElement, Props>(
@@ -30,7 +30,7 @@ export const Container = forwardRef<HTMLDivElement, Props>(
       horizontal,
       hover,
       onClick,
-      onRemove,
+      onEdit,
       label,
       placeholder,
       style,
@@ -41,7 +41,7 @@ export const Container = forwardRef<HTMLDivElement, Props>(
     }: Props,
     ref
   ) => {
-    const Component = onClick ? 'button' : 'div';
+    const Component = onClick ? "button" : "div";
 
     return (
       <Component
@@ -50,7 +50,7 @@ export const Container = forwardRef<HTMLDivElement, Props>(
         style={
           {
             ...style,
-            '--columns': columns,
+            "--columns": columns,
           } as React.CSSProperties
         }
         className={classNames(
@@ -69,7 +69,7 @@ export const Container = forwardRef<HTMLDivElement, Props>(
           <div className={styles.Header}>
             {label}
             <div className={styles.Actions}>
-              {onRemove ? <Remove onClick={onRemove} /> : undefined}
+              {onEdit ? <Edit onClick={onEdit} /> : undefined}
               <Handle {...handleProps} />
             </div>
           </div>

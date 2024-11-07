@@ -1,2 +1,2 @@
-export {Item} from './Item';
-export {Action, Handle, Remove, Add} from './components';
+export { Item } from "./Item";
+export { Action, Handle, Edit, Add } from "./components";

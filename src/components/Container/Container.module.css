@@ -92,12 +92,4 @@
 
 .Actions {
   display: flex;
-
-  > *:first-child:not(:last-child) {
-    opacity: 0;
-
-    &:focus-visible {
-      opacity: 1;
-    }
-  }
 }
