@@ -126,6 +126,7 @@ export interface Props {
   onColumnMove?(result: { newIndex: number; columnId: UniqueIdentifier }): void;
   onAddColumn?(item: TOnAddColumnArgs): void;
   onColumnEdit?(columnId: UniqueIdentifier): void;
+  onItemClick?(itemId: UniqueIdentifier): void;
   itemCount?: number;
   columns: Columns;
   setColumns: Dispatch<SetStateAction<Columns>>;
@@ -166,6 +167,7 @@ export function KanbanBoard({
   onColumnMove,
   onAddColumn,
   onColumnEdit,
+  onItemClick,
 }: Props) {
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(null);
@@ -545,6 +547,7 @@ export function KanbanBoard({
                       renderItem={renderItem}
                       containerId={containerId}
                       getIndex={getIndex}
+                      onItemClick={() => onItemClick?.(value)}
                     />
                   );
                 })}
@@ -691,6 +694,7 @@ interface SortableItemProps {
   style(args: any): React.CSSProperties;
   getIndex(id: UniqueIdentifier): number;
   renderItem(): React.ReactElement;
+  onItemClick?(): void;
   wrapperStyle({ index }: { index: number }): React.CSSProperties;
 }
 
@@ -705,6 +709,7 @@ function SortableItem({
   getIndex,
   wrapperStyle,
   content,
+  onItemClick,
 }: SortableItemProps) {
   const { setNodeRef, setActivatorNodeRef, listeners, isDragging, isSorting, over, overIndex, transform, transition } =
     useSortable({
@@ -738,6 +743,7 @@ function SortableItem({
       fadeIn={mountedWhileDragging}
       listeners={listeners}
       renderItem={renderItem}
+      onItemClick={onItemClick}
     />
   );
 }
