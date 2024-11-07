@@ -1,10 +1,10 @@
 import { UniqueIdentifier } from "@dnd-kit/core";
-import { Items, DataItem } from "../components/KanbanBoard";
+import { Columns, Item } from "../components/KanbanBoard";
 
 export function updateColumnItems(
-  items: Items,
+  items: Columns,
   columnId: UniqueIdentifier,
-  updateFn: (currentState: DataItem[]) => DataItem[]
+  updateFn: (currentState: Item[]) => Item[]
 ) {
   return items.map((column) => {
     if (column.id === columnId) {
@@ -17,7 +17,7 @@ export function updateColumnItems(
   });
 }
 
-export function removeColumnItem(items: Items, columnId: UniqueIdentifier, itemId: UniqueIdentifier) {
+export function removeColumnItem(items: Columns, columnId: UniqueIdentifier, itemId: UniqueIdentifier) {
   return items.map((column) => {
     if (column.id === columnId) {
       return {
@@ -29,11 +29,11 @@ export function removeColumnItem(items: Items, columnId: UniqueIdentifier, itemI
   });
 }
 
-export function removeColumn(items: Items, columnId: UniqueIdentifier) {
+export function removeColumn(items: Columns, columnId: UniqueIdentifier) {
   return items.filter((column) => column.id !== columnId);
 }
 
-export function updateColumnName(items: Items, columnId: UniqueIdentifier, newName: string) {
+export function updateColumnName(items: Columns, columnId: UniqueIdentifier, newName: string) {
   return items.map((column) => {
     if (column.id === columnId) {
       return {
