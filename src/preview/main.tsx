@@ -42,6 +42,7 @@ function App() {
       <KanbanBoard
         items={items}
         setItems={setItems}
+        onColumnEdit={console.log}
         onItemMove={(v) => console.log(v)}
         onColumnMove={(v) => console.log(v)}
         onAddColumn={handleOnAddColumn}

@@ -128,6 +128,7 @@ interface Props {
   onItemMove(result: MovedItemState): void;
   onColumnMove?(result: { newIndex: number; columnId: UniqueIdentifier }): void;
   onAddColumn?(item: TOnAddColumnArgs): void;
+  onColumnEdit?(columnId: UniqueIdentifier): void;
   itemCount?: number;
   items: Items;
   setItems: Dispatch<SetStateAction<Items>>;
@@ -166,6 +167,7 @@ export function KanbanBoard({
   onItemMove,
   onColumnMove,
   onAddColumn,
+  onColumnEdit,
 }: Props) {
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(null);
@@ -537,7 +539,7 @@ export function KanbanBoard({
               scrollable={scrollable}
               style={containerStyle}
               unstyled={minimal}
-              onRemove={() => handleRemove(containerId)}
+              onEdit={() => onColumnEdit?.(containerId)}
             >
               <SortableContext items={items} strategy={strategy}>
                 {items.map(({ id: value, name }, index) => {
@@ -560,12 +562,12 @@ export function KanbanBoard({
               </SortableContext>
             </DroppableContainer>
           ))}
-          {minimal ? undefined : (
+          {!onAddColumn ? undefined : (
             <DroppableContainer
               id={PLACEHOLDER_ID}
               disabled={isSortingContainer}
               items={empty}
-              onClick={handleAddColumn}
+              onClick={() => onAddColumn?.(null)}
               placeholder
             >
               + Add column
@@ -645,14 +647,6 @@ export function KanbanBoard({
           ))}
       </Container>
     );
-  }
-
-  function handleRemove(containerID: UniqueIdentifier) {
-    setContainers((containers) => containers.filter((id) => id !== containerID));
-  }
-
-  function handleAddColumn() {
-    onAddColumn?.(null);
   }
 }
 

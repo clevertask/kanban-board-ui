@@ -3,7 +3,7 @@ import classNames from "classnames";
 import type { DraggableSyntheticListeners } from "@dnd-kit/core";
 import type { Transform } from "@dnd-kit/utilities";
 
-import { Handle, Remove } from "./components";
+import { Handle, Edit } from "./components";
 
 import styles from "./Item.module.css";
 
@@ -25,7 +25,7 @@ export interface Props {
   wrapperStyle?: React.CSSProperties;
   value: React.ReactNode;
   content: string;
-  onRemove?(): void;
+  onEdit?(): void;
   renderItem?(args: {
     content: string;
     dragOverlay: boolean;
@@ -56,7 +56,7 @@ export const Item = React.memo(
         height,
         index,
         listeners,
-        onRemove,
+        onEdit,
         renderItem,
         sorting,
         style,
@@ -135,7 +135,7 @@ export const Item = React.memo(
           >
             {content}
             <span className={styles.Actions}>
-              {onRemove ? <Remove className={styles.Remove} onClick={onRemove} /> : null}
+              {onEdit ? <Edit className={styles.Remove} onClick={onEdit} /> : null}
               {handle ? <Handle {...handleProps} {...listeners} /> : null}
             </span>
           </div>
