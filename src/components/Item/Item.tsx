@@ -26,6 +26,7 @@ export interface Props {
   value: React.ReactNode;
   content: string;
   onEdit?(): void;
+  onItemClick?(): void;
   renderItem?(args: {
     content: string;
     dragOverlay: boolean;
@@ -39,6 +40,7 @@ export interface Props {
     transform: Props["transform"];
     transition: Props["transition"];
     value: Props["value"];
+    onItemClick?(): void;
   }): React.ReactElement;
 }
 
@@ -56,6 +58,7 @@ export const Item = React.memo(
         height,
         index,
         listeners,
+        onItemClick,
         onEdit,
         renderItem,
         sorting,
@@ -95,9 +98,11 @@ export const Item = React.memo(
           transition,
           value,
           content,
+          onItemClick,
         })
       ) : (
         <li
+          onClick={onItemClick}
           className={classNames(
             styles.Wrapper,
             fadeIn && styles.fadeIn,
