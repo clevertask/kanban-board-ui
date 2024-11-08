@@ -46,7 +46,7 @@ export const Container = forwardRef<HTMLDivElement, Props>(
     return (
       <Component
         {...props}
-        ref={ref}
+        ref={ref as React.Ref<HTMLDivElement & HTMLButtonElement>}
         style={
           {
             ...style,
