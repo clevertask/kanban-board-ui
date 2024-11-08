@@ -1,5 +1,5 @@
 {
-  "name": "kanban-board-ui",
+  "name": "@clevertask/kanban-board-ui",
   "version": "0.0.0",
   "type": "module",
   "files": [
