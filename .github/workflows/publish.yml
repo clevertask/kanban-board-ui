@@ -1,41 +1,20 @@
-name: Create Stable Release
+name: Publish to npm
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version to release (e.g. 1.2.3)"
-        required: true
+  release:
+    types: [created]
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Git
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "github-actions@clevertask.ai"
-
-      - name: Bump version in package.json
-        run: |
-          npm version ${{ inputs.version }} --no-git-tag-version
-          git add package.json package-lock.json
-          git commit -m "chore(release): bump version to v${{ inputs.version }}"
-
-      - name: Create Git tag
-        run: |
-          git tag v${{ inputs.version }}
-          git push origin HEAD
-          git push origin v${{ inputs.version }}
-
-      - name: Create GitHub Release with notes
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm ci
+      - run: npm run build
+      - run: npm publish
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create v${{ inputs.version }} \
-            --title "v${{ inputs.version }}" \
-            --generate-notes
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
