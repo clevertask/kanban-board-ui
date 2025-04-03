@@ -45,7 +45,7 @@ jobs:
 
       - name: Create GitHub Release with notes
         env:
-          GH_TOKEN: ${{ secrets.CLEVERTASK_DEV_PAT }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh release create v${{ inputs.version }} \
             --title "v${{ inputs.version }}" \
