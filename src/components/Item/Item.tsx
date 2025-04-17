@@ -7,7 +7,7 @@ import { Handle, Edit } from "./components";
 
 import styles from "./Item.module.css";
 
-export interface Props {
+export interface ItemProps {
   dragOverlay?: boolean;
   color?: string;
   disabled?: boolean;
@@ -35,17 +35,17 @@ export interface Props {
     index: number | undefined;
     fadeIn: boolean;
     listeners: DraggableSyntheticListeners;
-    ref: React.Ref<HTMLElement>;
+    ref: React.Ref<HTMLLIElement>;
     style: React.CSSProperties | undefined;
-    transform: Props["transform"];
-    transition: Props["transition"];
-    value: Props["value"];
+    transform: ItemProps["transform"];
+    transition: ItemProps["transition"];
+    value: ItemProps["value"];
     onItemClick?(): void;
   }): React.ReactElement;
 }
 
 export const Item = React.memo(
-  React.forwardRef<HTMLLIElement, Props>(
+  React.forwardRef<HTMLLIElement, ItemProps>(
     (
       {
         color,

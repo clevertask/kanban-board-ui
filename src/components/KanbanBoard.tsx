@@ -36,6 +36,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { coordinateGetter as multipleContainersCoordinateGetter } from "../utils/multipleContainerKeyboardCoordinates";
 import { Item } from "./Item";
 import { Container, ContainerProps } from "./Container";
+import { ItemProps } from "./Item/Item";
 
 const animateLayoutChanges: AnimateLayoutChanges = (args) =>
   defaultAnimateLayoutChanges({ ...args, wasDragging: true });
@@ -131,7 +132,7 @@ export interface Props {
   columns: Columns;
   setColumns: Dispatch<SetStateAction<Columns>>;
   handle?: boolean;
-  renderItem?: any;
+  renderItem?: ItemProps["renderItem"];
   strategy?: SortingStrategy;
   modifiers?: Modifiers;
   minimal?: boolean;

@@ -55,6 +55,34 @@ function App() {
         onItemClick={console.log}
         trashable
         onItemRemove={handleItemRemoval}
+        renderItem={({ content, dragging, onItemClick, listeners, ref, transform, index }) => {
+          const computedTransform = transform
+            ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0) scaleX(${
+                transform.scaleX ?? 1
+              }) scaleY(${transform.scaleY ?? 1})`
+            : undefined;
+
+          return (
+            <li
+              ref={ref}
+              onClick={onItemClick}
+              style={{
+                padding: "16px",
+                backgroundColor: dragging ? "#f0f0f0" : "#fff",
+                border: "1px solid #ccc",
+                borderRadius: "24px",
+                transform: computedTransform,
+                transition: "transform 200ms ease", // optional, for smoothness
+              }}
+            >
+              <strong>{content}</strong>
+              <button>Click me</button>
+              <div {...listeners} style={{ cursor: "pointer" }}>
+                Drag from here
+              </div>
+            </li>
+          );
+        }}
       />
       <button onClick={addNewItemToColumn}>Add item to column externally</button>
     </>
