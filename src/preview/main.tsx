@@ -55,6 +55,15 @@ function App() {
         onItemClick={console.log}
         trashable
         onItemRemove={handleItemRemoval}
+        renderColumn={(props) => {
+          console.log(props);
+          return (
+            <div ref={props.ref} style={{ padding: "1rem", width: "22rem", outline: "1px solid red", ...props.style }}>
+              <button {...props.listeners}>Drag meeeee!</button>
+              <h3>{props.label}</h3>
+            </div>
+          );
+        }}
         renderItem={({ content, dragging, onItemClick, listeners, ref, transform, index }) => {
           const computedTransform = transform
             ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0) scaleX(${

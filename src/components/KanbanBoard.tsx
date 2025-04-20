@@ -47,12 +47,14 @@ function DroppableContainer({
   id,
   items,
   style,
+  renderColumn,
   ...props
 }: ContainerProps & {
   disabled?: boolean;
   id: UniqueIdentifier;
   items: UniqueIdentifier[];
   style?: React.CSSProperties;
+  renderColumn: Props["renderColumn"];
 }) {
   const { active, attributes, isDragging, listeners, over, setNodeRef, transition, transform } = useSortable({
     id,
@@ -66,7 +68,25 @@ function DroppableContainer({
     ? (id === over.id && active?.data.current?.type !== "container") || items.includes(over.id)
     : false;
 
-  return (
+  return renderColumn ? (
+    renderColumn({
+      id,
+      label: props.label!,
+      children,
+      ref: disabled ? undefined : setNodeRef,
+      listeners,
+      attributes,
+      style: {
+        ...style,
+        transition,
+        transform: CSS.Translate.toString(transform),
+        opacity: isDragging ? 0.5 : undefined,
+      },
+      isDragging,
+      isOver: isOverContainer,
+      onEdit: props.onEdit,
+    })
+  ) : (
     <Container
       ref={disabled ? undefined : setNodeRef}
       style={{
@@ -133,6 +153,18 @@ export interface Props {
   setColumns: Dispatch<SetStateAction<Columns>>;
   handle?: boolean;
   renderItem?: ItemProps["renderItem"];
+  renderColumn?: (args: {
+    id: UniqueIdentifier;
+    label: string;
+    children: React.ReactNode;
+    ref: React.Ref<HTMLDivElement>;
+    listeners: any;
+    attributes: any;
+    style?: React.CSSProperties;
+    isDragging: boolean;
+    isOver: boolean;
+    onEdit?: () => void;
+  }) => React.ReactElement;
   strategy?: SortingStrategy;
   modifiers?: Modifiers;
   minimal?: boolean;
@@ -159,6 +191,7 @@ export function KanbanBoard({
   minimal = false,
   modifiers,
   renderItem,
+  renderColumn,
   strategy = verticalListSortingStrategy,
   trashable = false,
   onItemRemove,
@@ -532,6 +565,7 @@ export function KanbanBoard({
               style={containerStyle}
               unstyled={minimal}
               onEdit={() => onColumnEdit?.(containerId)}
+              renderColumn={renderColumn}
             >
               <SortableContext items={items} strategy={strategy}>
                 {items.map(({ id: value, name }, index) => {
@@ -607,37 +641,40 @@ export function KanbanBoard({
 
   function renderContainerDragOverlay(containerId: UniqueIdentifier) {
     return (
-      <Container
-        label={columns.find((i) => i.id === containerId)?.name || ""}
-        style={{
-          height: "100%",
-        }}
-        shadow
-        unstyled={false}
-      >
-        {columns
-          .find((i) => i.id === containerId)
-          ?.items.map(({ id: item, name }, index) => (
-            <Item
-              key={item}
-              value={item}
-              content={name}
-              handle={handle}
-              style={getItemStyles({
-                containerId,
-                overIndex: -1,
-                index: getIndex(item),
-                value: item,
-                isDragging: false,
-                isSorting: false,
-                isDragOverlay: false,
-              })}
-              color={getColor(item)}
-              wrapperStyle={wrapperStyle({ index })}
-              renderItem={renderItem}
-            />
-          ))}
-      </Container>
+      <>
+        <h1>Copyyinh</h1>
+        <Container
+          label={columns.find((i) => i.id === containerId)?.name || ""}
+          style={{
+            height: "100%",
+          }}
+          shadow
+          unstyled={false}
+        >
+          {columns
+            .find((i) => i.id === containerId)
+            ?.items.map(({ id: item, name }, index) => (
+              <Item
+                key={item}
+                value={item}
+                content={name}
+                handle={handle}
+                style={getItemStyles({
+                  containerId,
+                  overIndex: -1,
+                  index: getIndex(item),
+                  value: item,
+                  isDragging: false,
+                  isSorting: false,
+                  isDragOverlay: false,
+                })}
+                color={getColor(item)}
+                wrapperStyle={wrapperStyle({ index })}
+                renderItem={renderItem}
+              />
+            ))}
+        </Container>
+      </>
     );
   }
 }
