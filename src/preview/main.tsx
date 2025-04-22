@@ -61,6 +61,7 @@ function App() {
             <div ref={props.ref} style={{ padding: "1rem", width: "22rem", outline: "1px solid red", ...props.style }}>
               <button {...props.listeners}>Drag meeeee!</button>
               <h3>{props.label}</h3>
+              {props.children}
             </div>
           );
         }}

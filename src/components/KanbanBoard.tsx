@@ -640,41 +640,59 @@ export function KanbanBoard({
   }
 
   function renderContainerDragOverlay(containerId: UniqueIdentifier) {
+    const column = columns.find((i) => i.id === containerId);
+    if (!column) return null;
+
+    const children = column.items.map(({ id: item, name }, index) => (
+      <Item
+        key={item}
+        value={item}
+        content={name}
+        handle={handle}
+        style={getItemStyles({
+          containerId,
+          overIndex: -1,
+          index: getIndex(item),
+          value: item,
+          isDragging: false,
+          isSorting: false,
+          isDragOverlay: false,
+        })}
+        color={getColor(item)}
+        wrapperStyle={wrapperStyle({ index })}
+        renderItem={renderItem}
+      />
+    ));
+
+    if (renderColumn) {
+      return renderColumn({
+        id: column.id,
+        label: column.name,
+        children,
+        ref: null, // Not needed in overlay
+        listeners: {}, // Not needed in overlay
+        attributes: {}, // Not needed in overlay
+        style: {
+          height: "100%",
+          opacity: 0.8,
+        },
+        isDragging: true,
+        isOver: false,
+        onEdit: undefined, // Optional
+      });
+    }
+
     return (
-      <>
-        <h1>Copyyinh</h1>
-        <Container
-          label={columns.find((i) => i.id === containerId)?.name || ""}
-          style={{
-            height: "100%",
-          }}
-          shadow
-          unstyled={false}
-        >
-          {columns
-            .find((i) => i.id === containerId)
-            ?.items.map(({ id: item, name }, index) => (
-              <Item
-                key={item}
-                value={item}
-                content={name}
-                handle={handle}
-                style={getItemStyles({
-                  containerId,
-                  overIndex: -1,
-                  index: getIndex(item),
-                  value: item,
-                  isDragging: false,
-                  isSorting: false,
-                  isDragOverlay: false,
-                })}
-                color={getColor(item)}
-                wrapperStyle={wrapperStyle({ index })}
-                renderItem={renderItem}
-              />
-            ))}
-        </Container>
-      </>
+      <Container
+        label={column.name}
+        style={{
+          height: "100%",
+        }}
+        shadow
+        unstyled={false}
+      >
+        {children}
+      </Container>
     );
   }
 }
