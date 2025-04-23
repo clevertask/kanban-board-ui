@@ -6,8 +6,10 @@ import type { Transform } from "@dnd-kit/utilities";
 import { Handle, Edit } from "./components";
 
 import styles from "./Item.module.css";
+import type { Item as TItem } from "../KanbanBoard";
 
-export interface Props {
+export interface ItemProps<ExtendedItem = TItem> {
+  item: TItem<ExtendedItem>;
   dragOverlay?: boolean;
   color?: string;
   disabled?: boolean;
@@ -28,24 +30,25 @@ export interface Props {
   onEdit?(): void;
   onItemClick?(): void;
   renderItem?(args: {
-    content: string;
+    item: TItem<ExtendedItem>;
+    styleLayout: React.CSSProperties;
     dragOverlay: boolean;
     dragging: boolean;
     sorting: boolean;
     index: number | undefined;
     fadeIn: boolean;
-    listeners: DraggableSyntheticListeners;
-    ref: React.Ref<HTMLElement>;
+    dragListeners: DraggableSyntheticListeners;
+    ref: React.Ref<HTMLLIElement>;
     style: React.CSSProperties | undefined;
-    transform: Props["transform"];
-    transition: Props["transition"];
-    value: Props["value"];
+    transform: ItemProps["transform"];
+    transition: ItemProps["transition"];
+    value: ItemProps["value"];
     onItemClick?(): void;
   }): React.ReactElement;
 }
 
 export const Item = React.memo(
-  React.forwardRef<HTMLLIElement, Props>(
+  React.forwardRef<HTMLLIElement, ItemProps>(
     (
       {
         color,
@@ -55,7 +58,6 @@ export const Item = React.memo(
         fadeIn,
         handle,
         handleProps,
-        height,
         index,
         listeners,
         onItemClick,
@@ -68,6 +70,7 @@ export const Item = React.memo(
         value,
         wrapperStyle,
         content,
+        item,
         ...props
       },
       ref
@@ -84,6 +87,12 @@ export const Item = React.memo(
         };
       }, [dragOverlay]);
 
+      const computedTransform = transform
+        ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0) scaleX(${
+            transform.scaleX ?? 1
+          }) scaleY(${transform.scaleY ?? 1})`
+        : undefined;
+
       return renderItem ? (
         renderItem({
           dragOverlay: Boolean(dragOverlay),
@@ -91,14 +100,18 @@ export const Item = React.memo(
           sorting: Boolean(sorting),
           index,
           fadeIn: Boolean(fadeIn),
-          listeners,
+          dragListeners: listeners,
           ref,
           style,
           transform,
           transition,
           value,
-          content,
+          item,
           onItemClick,
+          styleLayout: {
+            transform: computedTransform,
+            transition: "transform 200ms ease",
+          },
         })
       ) : (
         <li

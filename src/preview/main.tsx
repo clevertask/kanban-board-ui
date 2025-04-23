@@ -5,7 +5,7 @@ import { removeColumnItem, updateColumnItems } from "../utils/item-state-mutatio
 import { UniqueIdentifier } from "@dnd-kit/core";
 
 function App() {
-  const [columns, setColumns] = useState<Columns>([
+  const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>([
     {
       id: "1",
       name: "A",
@@ -14,7 +14,7 @@ function App() {
     {
       id: "21",
       name: "A2212",
-      items: [{ id: "12asdasda", name: "asA2" }],
+      items: [{ id: "12asdasda", name: "asA2", metadata: { foo: "2" } }],
     },
   ]);
 
@@ -55,6 +55,40 @@ function App() {
         onItemClick={console.log}
         trashable
         onItemRemove={handleItemRemoval}
+        renderColumn={(props) => {
+          return (
+            <div ref={props.ref} style={{ padding: "1rem", width: "22rem", outline: "1px solid red", ...props.style }}>
+              <button {...props.dragListeners}>Drag meeeee!</button>
+              <h3>{props.label}</h3>
+              {props.children}
+            </div>
+          );
+        }}
+        renderItem={({ item, dragging, onItemClick, dragListeners, ref, styleLayout }) => {
+          return (
+            <li
+              ref={ref}
+              onClick={onItemClick}
+              style={{
+                padding: "16px",
+                marginTop: "1rem",
+                backgroundColor: dragging ? "#f0f0f0" : "#fff",
+                border: "1px solid #ccc",
+                borderRadius: "24px",
+                ...styleLayout,
+              }}
+            >
+              <strong>
+                {item.name} {item.metadata?.foo}
+              </strong>
+              <button>Click me</button>
+
+              <div {...dragListeners} style={{ cursor: "pointer" }}>
+                Drag from here
+              </div>
+            </li>
+          );
+        }}
       />
       <button onClick={addNewItemToColumn}>Add item to column externally</button>
     </>

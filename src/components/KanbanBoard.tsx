@@ -36,6 +36,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { coordinateGetter as multipleContainersCoordinateGetter } from "../utils/multipleContainerKeyboardCoordinates";
 import { Item } from "./Item";
 import { Container, ContainerProps } from "./Container";
+import { ItemProps } from "./Item/Item";
 
 const animateLayoutChanges: AnimateLayoutChanges = (args) =>
   defaultAnimateLayoutChanges({ ...args, wasDragging: true });
@@ -46,12 +47,14 @@ function DroppableContainer({
   id,
   items,
   style,
+  renderColumn,
   ...props
 }: ContainerProps & {
   disabled?: boolean;
   id: UniqueIdentifier;
   items: UniqueIdentifier[];
   style?: React.CSSProperties;
+  renderColumn: Props["renderColumn"];
 }) {
   const { active, attributes, isDragging, listeners, over, setNodeRef, transition, transform } = useSortable({
     id,
@@ -65,7 +68,24 @@ function DroppableContainer({
     ? (id === over.id && active?.data.current?.type !== "container") || items.includes(over.id)
     : false;
 
-  return (
+  return renderColumn ? (
+    renderColumn({
+      id,
+      label: props.label,
+      children,
+      ref: disabled ? undefined : setNodeRef,
+      dragListeners: listeners,
+      attributes,
+      style: {
+        ...style,
+        transition,
+        transform: CSS.Translate.toString(transform),
+        opacity: isDragging ? 0.5 : undefined,
+      },
+      isDragging,
+      isOver: isOverContainer,
+    })
+  ) : (
     <Container
       ref={disabled ? undefined : setNodeRef}
       style={{
@@ -96,8 +116,9 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
-export type Item = { id: UniqueIdentifier; name: string };
-export type Columns = { id: UniqueIdentifier; name: string; items: Item[] }[];
+export type BaseItem = { id: UniqueIdentifier; name: string };
+export type Item<ExtendedProps = BaseItem> = BaseItem & ExtendedProps;
+export type Columns<T = Item> = { id: UniqueIdentifier; name: string; items: Item<T>[] }[];
 export type TOnAddColumnArgs = { item: Item | null; fromContainer: UniqueIdentifier } | null;
 export type TOnItemRemoveArgs = { itemId: UniqueIdentifier; fromContainer: UniqueIdentifier };
 export interface MovedItemState {
@@ -107,7 +128,7 @@ export interface MovedItemState {
   targetColumnId: UniqueIdentifier;
   hasEnded: boolean;
 }
-export interface Props {
+export interface Props<ExtendedItem = Item> {
   adjustScale?: boolean;
   cancelDrop?: CancelDrop;
   containerStyle?: React.CSSProperties;
@@ -128,10 +149,22 @@ export interface Props {
   onColumnEdit?(columnId: UniqueIdentifier): void;
   onItemClick?(itemId: UniqueIdentifier): void;
   itemCount?: number;
-  columns: Columns;
-  setColumns: Dispatch<SetStateAction<Columns>>;
+  columns: Columns<ExtendedItem>;
+  setColumns: Dispatch<SetStateAction<Columns<ExtendedItem>>>;
   handle?: boolean;
-  renderItem?: any;
+  renderItem?: ItemProps<ExtendedItem>["renderItem"];
+  renderColumn?: (args: {
+    id: UniqueIdentifier;
+    label: string;
+    children: React.ReactNode;
+    ref: ((node: HTMLElement | null) => void) | undefined;
+    dragListeners: any;
+    attributes: any;
+    style?: React.CSSProperties;
+    isDragging: boolean;
+    isOver: boolean;
+    onEdit?: () => void;
+  }) => React.ReactElement;
   strategy?: SortingStrategy;
   modifiers?: Modifiers;
   minimal?: boolean;
@@ -145,7 +178,7 @@ export const TRASH_ID = "void";
 const PLACEHOLDER_ID = "placeholder";
 const empty: UniqueIdentifier[] = [];
 
-export function KanbanBoard({
+export function KanbanBoard<T = Item>({
   columns,
   setColumns,
   adjustScale = false,
@@ -158,6 +191,7 @@ export function KanbanBoard({
   minimal = false,
   modifiers,
   renderItem,
+  renderColumn,
   strategy = verticalListSortingStrategy,
   trashable = false,
   onItemRemove,
@@ -168,7 +202,7 @@ export function KanbanBoard({
   onAddColumn,
   onColumnEdit,
   onItemClick,
-}: Props) {
+}: Props<T>) {
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(null);
 
@@ -243,7 +277,7 @@ export function KanbanBoard({
     },
     [activeId, columns]
   );
-  const [clonedColumns, setClonedColumns] = useState<Columns | null>(null);
+  const [clonedColumns, setClonedColumns] = useState<Columns<T> | null>(null);
   const sensors = useSensors(
     useSensor(MouseSensor),
     useSensor(TouchSensor),
@@ -531,15 +565,18 @@ export function KanbanBoard({
               style={containerStyle}
               unstyled={minimal}
               onEdit={() => onColumnEdit?.(containerId)}
+              renderColumn={renderColumn}
             >
               <SortableContext items={items} strategy={strategy}>
-                {items.map(({ id: value, name }, index) => {
+                {items.map((item, index) => {
+                  const { id: value, name } = item;
                   return (
-                    <SortableItem
+                    <SortableItem<T>
                       disabled={isSortingContainer}
                       key={value}
                       id={value}
                       content={name}
+                      item={item}
                       index={index}
                       handle={handle}
                       style={getItemStyles}
@@ -560,6 +597,7 @@ export function KanbanBoard({
               disabled={isSortingContainer}
               items={empty}
               onClick={() => onAddColumn?.(null)}
+              renderColumn={undefined}
               placeholder
             >
               + Add column
@@ -582,11 +620,14 @@ export function KanbanBoard({
   );
 
   function renderSortableItemDragOverlay(id: UniqueIdentifier) {
+    const item = columns.find((i) => i.id === findContainer(id))?.items.find(({ id: _id }) => _id === id) || "";
+    if (!item) return null;
     return (
       <Item
         value={id}
         handle={handle}
-        content={columns.find((i) => i.id === findContainer(id))?.items.find(({ id: _id }) => _id === id)?.name || ""}
+        content={item.name}
+        item={item}
         style={getItemStyles({
           containerId: findContainer(id) as UniqueIdentifier,
           overIndex: -1,
@@ -605,37 +646,59 @@ export function KanbanBoard({
   }
 
   function renderContainerDragOverlay(containerId: UniqueIdentifier) {
+    const column = columns.find((i) => i.id === containerId);
+    if (!column) return null;
+
+    const children = column.items.map((item, index) => (
+      <Item
+        key={item.id}
+        value={item.id}
+        content={item.name}
+        handle={handle}
+        style={getItemStyles({
+          containerId,
+          overIndex: -1,
+          index: getIndex(item.id),
+          value: item.id,
+          isDragging: false,
+          isSorting: false,
+          isDragOverlay: false,
+        })}
+        item={item}
+        color={getColor(item.id)}
+        wrapperStyle={wrapperStyle({ index })}
+        renderItem={renderItem}
+      />
+    ));
+
+    if (renderColumn) {
+      return renderColumn({
+        id: column.id,
+        label: column.name,
+        children,
+        ref: null,
+        listeners: {},
+        attributes: {},
+        style: {
+          height: "100%",
+          opacity: 0.8,
+        },
+        isDragging: true,
+        isOver: false,
+        onEdit: undefined,
+      });
+    }
+
     return (
       <Container
-        label={columns.find((i) => i.id === containerId)?.name || ""}
+        label={column.name}
         style={{
           height: "100%",
         }}
         shadow
         unstyled={false}
       >
-        {columns
-          .find((i) => i.id === containerId)
-          ?.items.map(({ id: item, name }, index) => (
-            <Item
-              key={item}
-              value={item}
-              content={name}
-              handle={handle}
-              style={getItemStyles({
-                containerId,
-                overIndex: -1,
-                index: getIndex(item),
-                value: item,
-                isDragging: false,
-                isSorting: false,
-                isDragOverlay: false,
-              })}
-              color={getColor(item)}
-              wrapperStyle={wrapperStyle({ index })}
-              renderItem={renderItem}
-            />
-          ))}
+        {children}
       </Container>
     );
   }
@@ -684,21 +747,22 @@ function Trash({ id }: { id: UniqueIdentifier }) {
   );
 }
 
-interface SortableItemProps {
+interface SortableItemProps<ExtendedItem> {
   containerId: UniqueIdentifier;
   id: UniqueIdentifier;
   index: number;
   handle: boolean;
   content: string;
+  item: Item<ExtendedItem>;
   disabled?: boolean;
   style(args: any): React.CSSProperties;
   getIndex(id: UniqueIdentifier): number;
-  renderItem(): React.ReactElement;
+  renderItem: Props<ExtendedItem>["renderItem"];
   onItemClick?(): void;
   wrapperStyle({ index }: { index: number }): React.CSSProperties;
 }
 
-function SortableItem({
+function SortableItem<T>({
   disabled,
   id,
   index,
@@ -710,7 +774,8 @@ function SortableItem({
   wrapperStyle,
   content,
   onItemClick,
-}: SortableItemProps) {
+  item,
+}: SortableItemProps<T>) {
   const { setNodeRef, setActivatorNodeRef, listeners, isDragging, isSorting, over, overIndex, transform, transition } =
     useSortable({
       id,
@@ -723,6 +788,7 @@ function SortableItem({
       ref={disabled ? undefined : setNodeRef}
       value={id}
       content={content}
+      item={item}
       dragging={isDragging}
       sorting={isSorting}
       handle={handle}

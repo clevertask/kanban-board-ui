@@ -5,10 +5,10 @@ import { Handle, Edit } from "../Item";
 
 import styles from "./Container.module.css";
 
-export interface Props {
+export interface ContainerProps {
   children: React.ReactNode;
   columns?: number;
-  label?: string;
+  label: string;
   style?: React.CSSProperties;
   horizontal?: boolean;
   hover?: boolean;
@@ -21,7 +21,7 @@ export interface Props {
   onEdit?(): void;
 }
 
-export const Container = forwardRef<HTMLDivElement, Props>(
+export const Container = forwardRef<((node: HTMLElement | null) => void) | undefined, ContainerProps>(
   (
     {
       children,
@@ -38,7 +38,7 @@ export const Container = forwardRef<HTMLDivElement, Props>(
       shadow,
       unstyled,
       ...props
-    }: Props,
+    }: ContainerProps,
     ref
   ) => {
     const Component = onClick ? "button" : "div";
