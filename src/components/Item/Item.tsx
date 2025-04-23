@@ -7,6 +7,22 @@ import { Handle, Edit } from "./components";
 
 import styles from "./Item.module.css";
 import type { Item as TItem } from "../KanbanBoard";
+export type RenderItemArgs<T = TItem> = {
+  item: TItem<T>;
+  styleLayout: React.CSSProperties;
+  dragOverlay: boolean;
+  dragging: boolean;
+  sorting: boolean;
+  index: number | undefined;
+  fadeIn: boolean;
+  dragListeners: DraggableSyntheticListeners;
+  ref: React.Ref<any>;
+  style: React.CSSProperties | undefined;
+  transform: ItemProps["transform"];
+  transition: ItemProps["transition"];
+  value: ItemProps["value"];
+  onItemClick?(): void;
+};
 
 export interface ItemProps<ExtendedItem = TItem> {
   item: TItem<ExtendedItem>;
@@ -29,22 +45,7 @@ export interface ItemProps<ExtendedItem = TItem> {
   content: string;
   onEdit?(): void;
   onItemClick?(): void;
-  renderItem?(args: {
-    item: TItem<ExtendedItem>;
-    styleLayout: React.CSSProperties;
-    dragOverlay: boolean;
-    dragging: boolean;
-    sorting: boolean;
-    index: number | undefined;
-    fadeIn: boolean;
-    dragListeners: DraggableSyntheticListeners;
-    ref: React.Ref<HTMLLIElement>;
-    style: React.CSSProperties | undefined;
-    transform: ItemProps["transform"];
-    transition: ItemProps["transition"];
-    value: ItemProps["value"];
-    onItemClick?(): void;
-  }): React.ReactElement;
+  renderItem?(args: RenderItemArgs<ExtendedItem>): React.ReactElement;
 }
 
 export const Item = React.memo(
