@@ -6,8 +6,10 @@ import type { Transform } from "@dnd-kit/utilities";
 import { Handle, Edit } from "./components";
 
 import styles from "./Item.module.css";
+import type { Item as TItem } from "../KanbanBoard";
 
-export interface ItemProps {
+export interface ItemProps<ExtendedItem = TItem> {
+  item: TItem<ExtendedItem>;
   dragOverlay?: boolean;
   color?: string;
   disabled?: boolean;
@@ -28,13 +30,14 @@ export interface ItemProps {
   onEdit?(): void;
   onItemClick?(): void;
   renderItem?(args: {
-    content: string;
+    item: TItem<ExtendedItem>;
+    styleLayout: React.CSSProperties;
     dragOverlay: boolean;
     dragging: boolean;
     sorting: boolean;
     index: number | undefined;
     fadeIn: boolean;
-    listeners: DraggableSyntheticListeners;
+    dragListeners: DraggableSyntheticListeners;
     ref: React.Ref<HTMLLIElement>;
     style: React.CSSProperties | undefined;
     transform: ItemProps["transform"];
@@ -55,7 +58,6 @@ export const Item = React.memo(
         fadeIn,
         handle,
         handleProps,
-        height,
         index,
         listeners,
         onItemClick,
@@ -68,6 +70,7 @@ export const Item = React.memo(
         value,
         wrapperStyle,
         content,
+        item,
         ...props
       },
       ref
@@ -84,6 +87,12 @@ export const Item = React.memo(
         };
       }, [dragOverlay]);
 
+      const computedTransform = transform
+        ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0) scaleX(${
+            transform.scaleX ?? 1
+          }) scaleY(${transform.scaleY ?? 1})`
+        : undefined;
+
       return renderItem ? (
         renderItem({
           dragOverlay: Boolean(dragOverlay),
@@ -91,14 +100,18 @@ export const Item = React.memo(
           sorting: Boolean(sorting),
           index,
           fadeIn: Boolean(fadeIn),
-          listeners,
+          dragListeners: listeners,
           ref,
           style,
           transform,
           transition,
           value,
-          content,
+          item,
           onItemClick,
+          styleLayout: {
+            transform: computedTransform,
+            transition: "transform 200ms ease",
+          },
         })
       ) : (
         <li

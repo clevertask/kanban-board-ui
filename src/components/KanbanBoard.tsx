@@ -71,10 +71,10 @@ function DroppableContainer({
   return renderColumn ? (
     renderColumn({
       id,
-      label: props.label!,
+      label: props.label,
       children,
       ref: disabled ? undefined : setNodeRef,
-      listeners,
+      dragListeners: listeners,
       attributes,
       style: {
         ...style,
@@ -84,7 +84,6 @@ function DroppableContainer({
       },
       isDragging,
       isOver: isOverContainer,
-      onEdit: props.onEdit,
     })
   ) : (
     <Container
@@ -117,8 +116,9 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
-export type Item = { id: UniqueIdentifier; name: string };
-export type Columns = { id: UniqueIdentifier; name: string; items: Item[] }[];
+export type BaseItem = { id: UniqueIdentifier; name: string };
+export type Item<ExtendedProps = BaseItem> = BaseItem & ExtendedProps;
+export type Columns<T = Item> = { id: UniqueIdentifier; name: string; items: Item<T>[] }[];
 export type TOnAddColumnArgs = { item: Item | null; fromContainer: UniqueIdentifier } | null;
 export type TOnItemRemoveArgs = { itemId: UniqueIdentifier; fromContainer: UniqueIdentifier };
 export interface MovedItemState {
@@ -128,7 +128,7 @@ export interface MovedItemState {
   targetColumnId: UniqueIdentifier;
   hasEnded: boolean;
 }
-export interface Props {
+export interface Props<ExtendedItem = Item> {
   adjustScale?: boolean;
   cancelDrop?: CancelDrop;
   containerStyle?: React.CSSProperties;
@@ -149,16 +149,16 @@ export interface Props {
   onColumnEdit?(columnId: UniqueIdentifier): void;
   onItemClick?(itemId: UniqueIdentifier): void;
   itemCount?: number;
-  columns: Columns;
-  setColumns: Dispatch<SetStateAction<Columns>>;
+  columns: Columns<ExtendedItem>;
+  setColumns: Dispatch<SetStateAction<Columns<ExtendedItem>>>;
   handle?: boolean;
-  renderItem?: ItemProps["renderItem"];
+  renderItem?: ItemProps<ExtendedItem>["renderItem"];
   renderColumn?: (args: {
     id: UniqueIdentifier;
     label: string;
     children: React.ReactNode;
-    ref: React.Ref<HTMLDivElement>;
-    listeners: any;
+    ref: ((node: HTMLElement | null) => void) | undefined;
+    dragListeners: any;
     attributes: any;
     style?: React.CSSProperties;
     isDragging: boolean;
@@ -178,7 +178,7 @@ export const TRASH_ID = "void";
 const PLACEHOLDER_ID = "placeholder";
 const empty: UniqueIdentifier[] = [];
 
-export function KanbanBoard({
+export function KanbanBoard<T = Item>({
   columns,
   setColumns,
   adjustScale = false,
@@ -202,7 +202,7 @@ export function KanbanBoard({
   onAddColumn,
   onColumnEdit,
   onItemClick,
-}: Props) {
+}: Props<T>) {
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(null);
 
@@ -277,7 +277,7 @@ export function KanbanBoard({
     },
     [activeId, columns]
   );
-  const [clonedColumns, setClonedColumns] = useState<Columns | null>(null);
+  const [clonedColumns, setClonedColumns] = useState<Columns<T> | null>(null);
   const sensors = useSensors(
     useSensor(MouseSensor),
     useSensor(TouchSensor),
@@ -568,13 +568,15 @@ export function KanbanBoard({
               renderColumn={renderColumn}
             >
               <SortableContext items={items} strategy={strategy}>
-                {items.map(({ id: value, name }, index) => {
+                {items.map((item, index) => {
+                  const { id: value, name } = item;
                   return (
-                    <SortableItem
+                    <SortableItem<T>
                       disabled={isSortingContainer}
                       key={value}
                       id={value}
                       content={name}
+                      item={item}
                       index={index}
                       handle={handle}
                       style={getItemStyles}
@@ -595,6 +597,7 @@ export function KanbanBoard({
               disabled={isSortingContainer}
               items={empty}
               onClick={() => onAddColumn?.(null)}
+              renderColumn={undefined}
               placeholder
             >
               + Add column
@@ -617,11 +620,14 @@ export function KanbanBoard({
   );
 
   function renderSortableItemDragOverlay(id: UniqueIdentifier) {
+    const item = columns.find((i) => i.id === findContainer(id))?.items.find(({ id: _id }) => _id === id) || "";
+    if (!item) return null;
     return (
       <Item
         value={id}
         handle={handle}
-        content={columns.find((i) => i.id === findContainer(id))?.items.find(({ id: _id }) => _id === id)?.name || ""}
+        content={item.name}
+        item={item}
         style={getItemStyles({
           containerId: findContainer(id) as UniqueIdentifier,
           overIndex: -1,
@@ -643,22 +649,23 @@ export function KanbanBoard({
     const column = columns.find((i) => i.id === containerId);
     if (!column) return null;
 
-    const children = column.items.map(({ id: item, name }, index) => (
+    const children = column.items.map((item, index) => (
       <Item
-        key={item}
-        value={item}
-        content={name}
+        key={item.id}
+        value={item.id}
+        content={item.name}
         handle={handle}
         style={getItemStyles({
           containerId,
           overIndex: -1,
-          index: getIndex(item),
-          value: item,
+          index: getIndex(item.id),
+          value: item.id,
           isDragging: false,
           isSorting: false,
           isDragOverlay: false,
         })}
-        color={getColor(item)}
+        item={item}
+        color={getColor(item.id)}
         wrapperStyle={wrapperStyle({ index })}
         renderItem={renderItem}
       />
@@ -669,16 +676,16 @@ export function KanbanBoard({
         id: column.id,
         label: column.name,
         children,
-        ref: null, // Not needed in overlay
-        listeners: {}, // Not needed in overlay
-        attributes: {}, // Not needed in overlay
+        ref: null,
+        listeners: {},
+        attributes: {},
         style: {
           height: "100%",
           opacity: 0.8,
         },
         isDragging: true,
         isOver: false,
-        onEdit: undefined, // Optional
+        onEdit: undefined,
       });
     }
 
@@ -740,21 +747,22 @@ function Trash({ id }: { id: UniqueIdentifier }) {
   );
 }
 
-interface SortableItemProps {
+interface SortableItemProps<ExtendedItem> {
   containerId: UniqueIdentifier;
   id: UniqueIdentifier;
   index: number;
   handle: boolean;
   content: string;
+  item: Item<ExtendedItem>;
   disabled?: boolean;
   style(args: any): React.CSSProperties;
   getIndex(id: UniqueIdentifier): number;
-  renderItem(): React.ReactElement;
+  renderItem: Props<ExtendedItem>["renderItem"];
   onItemClick?(): void;
   wrapperStyle({ index }: { index: number }): React.CSSProperties;
 }
 
-function SortableItem({
+function SortableItem<T>({
   disabled,
   id,
   index,
@@ -766,7 +774,8 @@ function SortableItem({
   wrapperStyle,
   content,
   onItemClick,
-}: SortableItemProps) {
+  item,
+}: SortableItemProps<T>) {
   const { setNodeRef, setActivatorNodeRef, listeners, isDragging, isSorting, over, overIndex, transform, transition } =
     useSortable({
       id,
@@ -779,6 +788,7 @@ function SortableItem({
       ref={disabled ? undefined : setNodeRef}
       value={id}
       content={content}
+      item={item}
       dragging={isDragging}
       sorting={isSorting}
       handle={handle}

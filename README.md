@@ -1,27 +1,35 @@
 # @clevertask/kanban-board-ui
 
-A React component for rendering and managing a kanban board with drag-and-drop functionality. This is built on top of the [kanban board Component from the dnd-kit library](https://master--5fc05e08a4a65d0021ae0bf2.chromatic.com/?path=/story/presets-sortable-multiple-containers--drag-handle).
+A React component for rendering and managing a kanban board with drag-and-drop functionality. Built on top of [dnd-kit](https://github.com/clauderic/dnd-kit), this component offers a flexible and extensible API for building modern kanban boards.
 
-# Table of Contents
+---
 
-- [@clevertask/kanban-board-ui](#clevertaskkanban-board-ui)
-  - [Installation](#installation)
-  - [Usage](#usage)
-  - [Props](#props)
-  - [Helper Functions](#helper-functions)
-    - [updateColumnItems](#updatecolumnitems)
-    - [removeColumnItem](#removecolumnitem)
-    - [removeColumn](#removecolumn)
-    - [updateColumnName](#updatecolumnname)
-  - [Roadmap](#roadmap)
-  - [Release Process](#release-process)
-  - [License](#license)
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Custom Components](#custom-components)
+  - [Custom Item Rendering (`renderItem`)](#custom-item-rendering-renderitem)
+  - [Custom Column Rendering (`renderColumn`)](#custom-column-rendering-rendercolumn)
+- [Props](#props)
+- [Helper Functions](#helper-functions)
+  - [updateColumnItems](#updatecolumnitems)
+  - [removeColumnItem](#removecolumnitem)
+  - [removeColumn](#removecolumn)
+  - [updateColumnName](#updatecolumnname)
+- [Roadmap](#roadmap)
+- [Release Process](#release-process)
+- [License](#license)
+
+---
 
 ## Installation
 
 ```bash
 npm install @clevertask/kanban-board-ui
 ```
+
+---
 
 ## Usage
 
@@ -34,25 +42,114 @@ function App() {
   const [columns, setColumns] = useState<Columns>([
     {
       id: "1",
-      name: "A",
-      items: [{ id: "1.1", name: "A1" }],
+      name: "To Do",
+      items: [{ id: "1.1", name: "Task A" }],
     },
     {
       id: "2",
-      name: "B",
-      items: [{ id: "2.2", name: "B1" }],
+      name: "In Progress",
+      items: [{ id: "2.1", name: "Task B" }],
     },
   ]);
 
   return (
-    <KanbanBoard
-      columns={columns}
-      setColumns={setColumns}
-      // ... other props
-    />
+    <KanbanBoard columns={columns} setColumns={setColumns} onItemClick={(itemId) => console.log("Clicked", itemId)} />
   );
 }
 ```
+
+---
+
+## Custom Components
+
+You can fully customize how both **items** and **columns** are rendered using the `renderItem` and `renderColumn` props.
+
+### Custom Item Rendering (`renderItem`)
+
+```tsx
+<KanbanBoard
+  columns={columns}
+  setColumns={setColumns}
+  renderItem={({ item, dragging, dragListeners, ref, styleLayout }) => (
+    <li
+      ref={ref}
+      style={{
+        padding: "16px",
+        marginTop: "1rem",
+        backgroundColor: dragging ? "#f0f0f0" : "#fff",
+        border: "1px solid #ccc",
+        borderRadius: "24px",
+        ...styleLayout,
+      }}
+    >
+      <strong>{item.name}</strong>
+      <button>Click me</button>
+      <div {...dragListeners} style={{ cursor: "grab" }}>
+        Drag from here
+      </div>
+    </li>
+  )}
+/>
+```
+
+### Custom Column Rendering (`renderColumn`)
+
+```tsx
+<KanbanBoard
+  columns={columns}
+  setColumns={setColumns}
+  renderColumn={(props) => (
+    <div
+      ref={props.ref}
+      style={{
+        padding: "1rem",
+        width: "22rem",
+        outline: "1px solid red",
+        backgroundColor: "#fafafa",
+        ...props.style,
+      }}
+    >
+      <button {...props.listeners}>Drag me!</button>
+      <h3>{props.label}</h3>
+      {props.children}
+    </div>
+  )}
+/>
+```
+
+### Extending Item Types
+
+You can extend the default item structure using generics. This allows you to pass custom metadata or fields to each item and access them inside your custom `renderItem` function.
+
+#### Example: Adding Metadata to Items
+
+```tsx
+const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>([
+  {
+    id: "1",
+    name: "To Do",
+    items: [{ id: "1.1", name: "Task A" }],
+  },
+  {
+    id: "2",
+    name: "In Progress",
+    items: [{ id: "2.1", name: "Task B", metadata: { foo: "🔥" } }],
+  },
+]);
+```
+
+Then in your `renderItem`:
+
+```tsx
+renderItem={({ item }) => (
+  <div>
+    <strong>{item.name}</strong>
+    <span>{item.metadata?.foo}</span>
+  </div>
+)}
+```
+
+---
 
 ## Props
 
@@ -67,143 +164,56 @@ function App() {
 | `onColumnMove` | `({newIndex: number; columnId: UniqueIdentifier;}) => void` | `undefined`  | Callback triggered when a column is moved to a new position. Provides the column's `id` and its new index.                                                    |
 | `onItemMove`   | `(result: MovedItemState) => void`                          | `undefined`  | Callback triggered when an item is moved to another column or its position changes within the same column.                                                    |
 | `onColumnEdit` | `(columnId: UniqueIdentifier): void`                        | `undefined`  | Callback triggered when a column is clicked for editing. Provides the column's `id`.                                                                          |
+| `renderItem`   | `({ item, ... }) => React.ReactElement`                     | `undefined`  | Custom render function for items. Gives full control over layout, styling, and drag handle behavior.                                                          |
+| `renderColumn` | `({ id, label, ... }) => React.ReactElement`                | `undefined`  | Custom render function for columns. Allows full control over column layout, including drag handle and header.                                                 |
+
+---
 
 ## Helper Functions
 
 ### `updateColumnItems`
 
-```typescript
-export declare function updateColumnItems(
-  items: Columns,
-  columnId: UniqueIdentifier,
-  updateFn: (currentState: Item[]) => Item[]
-): {
-  id: UniqueIdentifier;
-  name: string;
-  items: Item[];
-}[];
+```ts
+updateColumnItems(columns, columnId, updateFn);
 ```
 
-Updates the items in a specified column. This function is particularly useful for operations like adding, updating, or reordering items in a column.
-
-> **Note**: In most cases, you’ll primarily use this function to add new items to a column, as drag-and-drop updates are automatically handled by the `KanbanBoard` component.
-
-**Usage Example**:
-
-```typescript
-const updatedColumns = updateColumnItems(columns, "1", (currentColumnItems) => [
-  ...currentColumnItems,
-  { id: "1.2", name: "I'm a new item!" },
-]);
-
-setColumns(updatedColumns);
-```
-
----
+Updates the items in a specific column.
 
 ### `removeColumnItem`
 
-```typescript
-export declare function removeColumnItem(
-  items: Columns,
-  columnId: UniqueIdentifier,
-  itemId: UniqueIdentifier
-): {
-  id: UniqueIdentifier;
-  name: string;
-  items: Item[];
-}[];
+```ts
+removeColumnItem(columns, columnId, itemId);
 ```
 
-Removes an item from a specified column. Use this function when an item is dropped into the trashable drop zone, or moved to the "create new column" drop zone.
-
-**Usage Example**:
-
-```tsx
-<KanbanBoard
-  onAddColumn={(data) => {
-    if (data?.item) {
-      const updatedColumns = removeColumnItem(columns, data.fromContainer, data.item.id);
-      setColumns(() => [...updatedColumns, { id: "3", name: "Column C created on the fly", items: [data.item] }]);
-    } else {
-      setColumns((currentColumns) => [...currentColumns, { id: "3", name: "Column C created on the fly", items: [] }]);
-    }
-  }}
-/>
-```
-
----
+Removes an item from a specific column.
 
 ### `removeColumn`
 
-```typescript
-export declare function removeColumn(
-  items: Columns,
-  columnId: UniqueIdentifier
-): {
-  id: UniqueIdentifier;
-  name: string;
-  items: Item[];
-}[];
+```ts
+removeColumn(columns, columnId);
 ```
 
-Removes a column by its ID. Useful for handling scenarios where a column is deleted from the board.
-
-**Usage Example**:
-
-```typescript
-const updatedColumns = removeColumn(columns, "1");
-setColumns(updatedColumns);
-```
-
----
+Removes a column by its ID.
 
 ### `updateColumnName`
 
-```typescript
-export declare function updateColumnName(
-  items: Columns,
-  columnId: UniqueIdentifier,
-  newName: string
-): {
-  id: UniqueIdentifier;
-  name: string;
-  items: Item[];
-}[];
+```ts
+updateColumnName(columns, columnId, newName);
 ```
 
-Updates the name of a specific column by its ID.
+Updates a column's name.
 
-**Usage Example**:
-
-```typescript
-const updatedColumns = updateColumnName(columns, "1", "My name changed!");
-setColumns(updatedColumns);
-```
+---
 
 ## Roadmap
 
-We're constantly working to improve @clevertask/kanban-board-ui. Here are some features we're planning to implement:
+We're constantly working to improve `@clevertask/kanban-board-ui`. Here's what’s coming next:
 
-- **Virtualization**: Improve performance for large trees by only rendering visible nodes.
-- **Custom item rendering**: This is supported partially, the thing is that you'll only have access to the item's `id` and `name` props. The idea is that we can send properties to the item object as needed so you can build your item without any restrictions.
-- **Drag multiple items**: Enable dragging and dropping multiple selected items at once.
-- **API Example**: Provide a comprehensive example illustrating real-world usage with a backend API.
-- **E2E tests**: It will ensure this component's working as expected.
-
-We're excited about these upcoming features and welcome any feedback or contributions from the community. If you have any suggestions or would like to contribute to any of these features, please open an issue or submit a pull request on our GitHub repository.
-
-## Release Process
-
-This package is automatically published to npm when a new release is created on GitHub. To create a new release:
-
-1. Update the version in `package.json` according to semantic versioning rules.
-2. Commit the version change: `git commit -am "Bump version to x.x.x"`
-3. Create a new tag: `git tag vx.x.x`
-4. Push the changes and the tag: `git push && git push --tags`
-5. Go to the GitHub repository and create a new release, selecting the tag you just created.
-
-The GitHub Action will automatically build, test, and publish the new version to npm.
+- **Virtualization**: Improve performance for large boards.
+- **Drag multiple items**: Enable selecting and dragging multiple items at once.
+- **API Example**: Provide a full-stack example with backend integration.
+- **E2E tests**: Ensure long-term stability and confidence in updates.
+- **User personalization**: Let users configure card layouts and visible fields.
 
 ## License
 

@@ -5,7 +5,7 @@ import { removeColumnItem, updateColumnItems } from "../utils/item-state-mutatio
 import { UniqueIdentifier } from "@dnd-kit/core";
 
 function App() {
-  const [columns, setColumns] = useState<Columns>([
+  const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>([
     {
       id: "1",
       name: "A",
@@ -14,7 +14,7 @@ function App() {
     {
       id: "21",
       name: "A2212",
-      items: [{ id: "12asdasda", name: "asA2" }],
+      items: [{ id: "12asdasda", name: "asA2", metadata: { foo: "2" } }],
     },
   ]);
 
@@ -56,38 +56,34 @@ function App() {
         trashable
         onItemRemove={handleItemRemoval}
         renderColumn={(props) => {
-          console.log(props);
           return (
             <div ref={props.ref} style={{ padding: "1rem", width: "22rem", outline: "1px solid red", ...props.style }}>
-              <button {...props.listeners}>Drag meeeee!</button>
+              <button {...props.dragListeners}>Drag meeeee!</button>
               <h3>{props.label}</h3>
               {props.children}
             </div>
           );
         }}
-        renderItem={({ content, dragging, onItemClick, listeners, ref, transform, index }) => {
-          const computedTransform = transform
-            ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0) scaleX(${
-                transform.scaleX ?? 1
-              }) scaleY(${transform.scaleY ?? 1})`
-            : undefined;
-
+        renderItem={({ item, dragging, onItemClick, dragListeners, ref, styleLayout }) => {
           return (
             <li
               ref={ref}
               onClick={onItemClick}
               style={{
                 padding: "16px",
+                marginTop: "1rem",
                 backgroundColor: dragging ? "#f0f0f0" : "#fff",
                 border: "1px solid #ccc",
                 borderRadius: "24px",
-                transform: computedTransform,
-                transition: "transform 200ms ease", // optional, for smoothness
+                ...styleLayout,
               }}
             >
-              <strong>{content}</strong>
+              <strong>
+                {item.name} {item.metadata?.foo}
+              </strong>
               <button>Click me</button>
-              <div {...listeners} style={{ cursor: "pointer" }}>
+
+              <div {...dragListeners} style={{ cursor: "pointer" }}>
                 Drag from here
               </div>
             </li>
