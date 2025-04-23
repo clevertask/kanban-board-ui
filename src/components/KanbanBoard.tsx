@@ -84,6 +84,7 @@ function DroppableContainer({
       },
       isDragging,
       isOver: isOverContainer,
+      isColumnPlaceholder: id === PLACEHOLDER_ID,
     })
   ) : (
     <Container
@@ -128,6 +129,19 @@ export interface MovedItemState {
   targetColumnId: UniqueIdentifier;
   hasEnded: boolean;
 }
+export type ColumnRenderArgs = {
+  id: UniqueIdentifier;
+  label: string;
+  children: React.ReactNode;
+  ref: ((node: HTMLElement | null) => void) | undefined;
+  dragListeners: any;
+  attributes: any;
+  style?: React.CSSProperties;
+  isDragging: boolean;
+  isOver: boolean;
+  isColumnPlaceholder: boolean;
+  onEdit?: () => void;
+};
 export interface Props<ExtendedItem = Item> {
   adjustScale?: boolean;
   cancelDrop?: CancelDrop;
@@ -153,18 +167,7 @@ export interface Props<ExtendedItem = Item> {
   setColumns: Dispatch<SetStateAction<Columns<ExtendedItem>>>;
   handle?: boolean;
   renderItem?: ItemProps<ExtendedItem>["renderItem"];
-  renderColumn?: (args: {
-    id: UniqueIdentifier;
-    label: string;
-    children: React.ReactNode;
-    ref: ((node: HTMLElement | null) => void) | undefined;
-    dragListeners: any;
-    attributes: any;
-    style?: React.CSSProperties;
-    isDragging: boolean;
-    isOver: boolean;
-    onEdit?: () => void;
-  }) => React.ReactElement;
+  renderColumn?: (args: ColumnRenderArgs) => React.ReactElement;
   strategy?: SortingStrategy;
   modifiers?: Modifiers;
   minimal?: boolean;
@@ -597,7 +600,7 @@ export function KanbanBoard<T = Item>({
               disabled={isSortingContainer}
               items={empty}
               onClick={() => onAddColumn?.(null)}
-              renderColumn={undefined}
+              renderColumn={renderColumn}
               placeholder
             >
               + Add column
