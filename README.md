@@ -53,7 +53,11 @@ function App() {
   ]);
 
   return (
-    <KanbanBoard columns={columns} setColumns={setColumns} onItemClick={(itemId) => console.log("Clicked", itemId)} />
+    <KanbanBoard
+      columns={columns}
+      setColumns={setColumns}
+      onItemClick={(itemId) => console.log("Clicked", itemId)}
+    />
   );
 }
 ```
@@ -124,18 +128,20 @@ You can extend the default item structure using generics. This allows you to pas
 #### Example: Adding Metadata to Items
 
 ```tsx
-const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>([
-  {
-    id: "1",
-    name: "To Do",
-    items: [{ id: "1.1", name: "Task A" }],
-  },
-  {
-    id: "2",
-    name: "In Progress",
-    items: [{ id: "2.1", name: "Task B", metadata: { foo: "🔥" } }],
-  },
-]);
+const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>(
+  [
+    {
+      id: "1",
+      name: "To Do",
+      items: [{ id: "1.1", name: "Task A" }],
+    },
+    {
+      id: "2",
+      name: "In Progress",
+      items: [{ id: "2.1", name: "Task B", metadata: { foo: "🔥" } }],
+    },
+  ],
+);
 ```
 
 Then in your `renderItem`:
@@ -147,6 +153,27 @@ renderItem={({ item }) => (
     <span>{item.metadata?.foo}</span>
   </div>
 )}
+```
+
+#### Example: Adding Metadata to Columns **(experimental)**
+
+Currently, the `metadata` property for Columns accepts `any` value. We plan to fix that type in the future. So, we consider the `metadata` prop for Columns experimental
+
+```tsx
+const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>([
+  {
+    id: "1",
+    name: "To Do",
+    items: [{ id: "1.1", name: "Task A" }],
+    metadata: { statusId: 37 }
+  },
+  {
+    id: "2",
+    name: "In Progress",
+    items: [{ id: "2.1", name: "Task B"],
+    metadata: { statusId: 31 }
+  },
+]);
 ```
 
 ---
