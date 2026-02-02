@@ -1,20 +1,31 @@
 import { StrictMode, useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Columns, KanbanBoard, TOnAddColumnArgs } from "../components/KanbanBoard";
-import { removeColumnItem, updateColumnItems } from "../utils/item-state-mutations";
+import {
+  Columns,
+  KanbanBoard,
+  TOnAddColumnArgs,
+} from "../components/KanbanBoard";
+import {
+  removeColumnItem,
+  updateColumnItems,
+} from "../utils/item-state-mutations";
 import { UniqueIdentifier } from "@dnd-kit/core";
 
 function App() {
-  const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>([
+  const [columns, setColumns] = useState<
+    Columns<{ metadata?: { foo: string } }>
+  >([
     {
       id: "1",
       name: "A",
       items: [{ id: "12", name: "A2" }],
+      metadata: { columnId: 4 },
     },
     {
       id: "21",
       name: "A2212",
       items: [{ id: "12asdasda", name: "asA2", metadata: { foo: "2" } }],
+      metadata: { columnId: 222 },
     },
   ]);
 
@@ -28,18 +39,40 @@ function App() {
 
   const handleOnAddColumn = (data: TOnAddColumnArgs) => {
     if (data && data.item) {
-      const updatedItems = removeColumnItem(columns, data.fromContainer, data.item.id);
+      const updatedItems = removeColumnItem(
+        columns,
+        data.fromContainer,
+        data.item.id,
+      );
       setColumns(() => [
         ...updatedItems,
-        { id: Math.random().toString(), name: Math.random().toString(), items: [data.item!] },
+        {
+          id: Math.random().toString(),
+          name: Math.random().toString(),
+          items: [data.item!],
+        },
       ]);
     } else {
-      setColumns((ci) => [...ci, { id: Math.random().toString(), name: Math.random().toString(), items: [] }]);
+      setColumns((ci) => [
+        ...ci,
+        {
+          id: Math.random().toString(),
+          name: Math.random().toString(),
+          items: [],
+        },
+      ]);
     }
   };
 
-  const handleItemRemoval = (result: { itemId: UniqueIdentifier; fromContainer: UniqueIdentifier }) => {
-    const updatedItems = removeColumnItem(columns, result.fromContainer, result.itemId);
+  const handleItemRemoval = (result: {
+    itemId: UniqueIdentifier;
+    fromContainer: UniqueIdentifier;
+  }) => {
+    const updatedItems = removeColumnItem(
+      columns,
+      result.fromContainer,
+      result.itemId,
+    );
     setColumns(updatedItems);
   };
 
@@ -57,14 +90,30 @@ function App() {
         onItemRemove={handleItemRemoval}
         renderColumn={(props) => {
           return (
-            <div ref={props.ref} style={{ padding: "1rem", width: "22rem", outline: "1px solid red", ...props.style }}>
-              <button {...props.dragListeners}>Drag meeeee!</button>
+            <div
+              ref={props.ref}
+              style={{
+                padding: "1rem",
+                width: "22rem",
+                outline: "1px solid red",
+                ...props.style,
+              }}
+            >
+              <button {...props.dragListeners}>Drag meeeasdee!</button>
               <h3>{props.label}</h3>
+              <h3>{props.columnMetadata?.columnId}</h3>
               {props.children}
             </div>
           );
         }}
-        renderItem={({ item, dragging, onItemClick, dragListeners, ref, styleLayout }) => {
+        renderItem={({
+          item,
+          dragging,
+          onItemClick,
+          dragListeners,
+          ref,
+          styleLayout,
+        }) => {
           return (
             <li
               ref={ref}
@@ -90,7 +139,9 @@ function App() {
           );
         }}
       />
-      <button onClick={addNewItemToColumn}>Add item to column externally</button>
+      <button onClick={addNewItemToColumn}>
+        Add item to column externally
+      </button>
     </>
   );
 }
@@ -98,5 +149,5 @@ function App() {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
-  </StrictMode>
+  </StrictMode>,
 );

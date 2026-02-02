@@ -1,4 +1,11 @@
-import React, { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import {
   CancelDrop,
@@ -48,15 +55,26 @@ function DroppableContainer({
   items,
   style,
   renderColumn,
+  columnMetadata,
   ...props
 }: ContainerProps & {
   disabled?: boolean;
   id: UniqueIdentifier;
   items: UniqueIdentifier[];
   style?: React.CSSProperties;
+  columnMetadata: any;
   renderColumn: Props["renderColumn"];
 }) {
-  const { active, attributes, isDragging, listeners, over, setNodeRef, transition, transform } = useSortable({
+  const {
+    active,
+    attributes,
+    isDragging,
+    listeners,
+    over,
+    setNodeRef,
+    transition,
+    transform,
+  } = useSortable({
     id,
     data: {
       type: "container",
@@ -65,13 +83,15 @@ function DroppableContainer({
     animateLayoutChanges,
   });
   const isOverContainer = over
-    ? (id === over.id && active?.data.current?.type !== "container") || items.includes(over.id)
+    ? (id === over.id && active?.data.current?.type !== "container") ||
+      items.includes(over.id)
     : false;
 
   return renderColumn ? (
     renderColumn({
       id,
       label: props.label,
+      columnMetadata,
       children,
       ref: disabled ? undefined : setNodeRef,
       dragListeners: listeners,
@@ -119,9 +139,20 @@ const dropAnimation: DropAnimation = {
 
 export type BaseItem = { id: UniqueIdentifier; name: string };
 export type Item<ExtendedProps = BaseItem> = BaseItem & ExtendedProps;
-export type Columns<T = Item> = { id: UniqueIdentifier; name: string; items: Item<T>[] }[];
-export type TOnAddColumnArgs = { item: Item | null; fromContainer: UniqueIdentifier } | null;
-export type TOnItemRemoveArgs = { itemId: UniqueIdentifier; fromContainer: UniqueIdentifier };
+export type Columns<T = Item> = {
+  id: UniqueIdentifier;
+  name: string;
+  items: Item<T>[];
+  metadata?: any;
+}[];
+export type TOnAddColumnArgs = {
+  item: Item | null;
+  fromContainer: UniqueIdentifier;
+} | null;
+export type TOnItemRemoveArgs = {
+  itemId: UniqueIdentifier;
+  fromContainer: UniqueIdentifier;
+};
 export interface MovedItemState {
   itemId: UniqueIdentifier;
   newIndex: number;
@@ -132,6 +163,7 @@ export interface MovedItemState {
 export type ColumnRenderArgs = {
   id: UniqueIdentifier;
   label: string;
+  columnMetadata: any;
   children: React.ReactNode;
   ref: ((node: HTMLElement | null) => void) | undefined;
   dragListeners: any;
@@ -207,11 +239,15 @@ export function KanbanBoard<T = Item>({
   onItemClick,
 }: Props<T>) {
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
-  const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(null);
+  const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(
+    null,
+  );
 
   const recentlyMovedToNewContainer = useRef(false);
   const lastOverId = useRef<UniqueIdentifier | null>(null);
-  const isSortingContainer = activeId ? columns.some(({ id }) => id === activeId) : false;
+  const isSortingContainer = activeId
+    ? columns.some(({ id }) => id === activeId)
+    : false;
 
   /**
    * Custom collision detection strategy optimized for multiple containers
@@ -227,7 +263,7 @@ export function KanbanBoard<T = Item>({
         return closestCenter({
           ...args,
           droppableContainers: args.droppableContainers.filter((container) =>
-            columns.some(({ id }) => id === container.id)
+            columns.some(({ id }) => id === container.id),
           ),
         });
       }
@@ -257,7 +293,9 @@ export function KanbanBoard<T = Item>({
             overId = closestCenter({
               ...args,
               droppableContainers: args.droppableContainers.filter(
-                (container) => container.id !== overId && containerItems.some(({ id }) => id === container.id)
+                (container) =>
+                  container.id !== overId &&
+                  containerItems.some(({ id }) => id === container.id),
               ),
             })[0]?.id;
           }
@@ -278,7 +316,7 @@ export function KanbanBoard<T = Item>({
       // If no droppable is matched, return the last match
       return lastOverId.current ? [{ id: lastOverId.current }] : [];
     },
-    [activeId, columns]
+    [activeId, columns],
   );
   const [clonedColumns, setClonedColumns] = useState<Columns<T> | null>(null);
   const sensors = useSensors(
@@ -286,7 +324,7 @@ export function KanbanBoard<T = Item>({
     useSensor(TouchSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter,
-    })
+    }),
   );
   const findItem = (id: UniqueIdentifier) => {
     for (const column of columns) {
@@ -369,7 +407,11 @@ export function KanbanBoard<T = Item>({
       }}
       onDragOver={({ active, over }) => {
         const overId = over?.id;
-        if (overId == null || overId === TRASH_ID || columns.some(({ id }) => active.id === id)) {
+        if (
+          overId == null ||
+          overId === TRASH_ID ||
+          columns.some(({ id }) => active.id === id)
+        ) {
           return;
         }
 
@@ -392,7 +434,9 @@ export function KanbanBoard<T = Item>({
           const overItems = overColumn.items;
 
           const overIndex = overItems.findIndex(({ id }) => id === overId);
-          const activeIndex = activeItems.findIndex(({ id }) => id === active.id);
+          const activeIndex = activeItems.findIndex(
+            ({ id }) => id === active.id,
+          );
 
           let newIndex: number;
 
@@ -402,11 +446,13 @@ export function KanbanBoard<T = Item>({
             const isBelowOverItem =
               over &&
               active.rect.current.translated &&
-              active.rect.current.translated.top > over.rect.top + over.rect.height;
+              active.rect.current.translated.top >
+                over.rect.top + over.rect.height;
 
             const modifier = isBelowOverItem ? 1 : 0;
 
-            newIndex = overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
+            newIndex =
+              overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
           }
 
           recentlyMovedToNewContainer.current = true;
@@ -418,7 +464,7 @@ export function KanbanBoard<T = Item>({
                 itemId: active.id,
                 targetColumnId: overContainer,
                 newIndex,
-              }
+              },
           );
 
           // Update the items array in an array-based structure
@@ -450,7 +496,9 @@ export function KanbanBoard<T = Item>({
           const overIndex = columns.map(({ id }) => id).indexOf(over.id);
 
           onColumnMove?.({ newIndex: overIndex, columnId: active.id });
-          setColumns((containers) => arrayMove(containers, activeIndex, overIndex));
+          setColumns((containers) =>
+            arrayMove(containers, activeIndex, overIndex),
+          );
           return;
         }
 
@@ -470,14 +518,20 @@ export function KanbanBoard<T = Item>({
 
         if (overId === TRASH_ID) {
           if (activeId) {
-            onItemRemove?.({ itemId: activeId, fromContainer: activeContainer });
+            onItemRemove?.({
+              itemId: activeId,
+              fromContainer: activeContainer,
+            });
           }
           setActiveId(null);
           return;
         }
 
         if (overId === PLACEHOLDER_ID) {
-          onAddColumn?.({ item: findItem(active.id), fromContainer: activeContainer });
+          onAddColumn?.({
+            item: findItem(active.id),
+            fromContainer: activeContainer,
+          });
           setActiveId(null);
           return;
         }
@@ -508,22 +562,28 @@ export function KanbanBoard<T = Item>({
                   newIndex: overIndex,
                   targetColumnId: overContainer,
                   hasEnded: true,
-                }
+                },
             );
 
             setColumns((items) =>
               items.map((item) => {
                 if (item.id === overContainer) {
-                  const currentContainerItems = items.find((i) => i.id === overContainer)?.items;
+                  const currentContainerItems = items.find(
+                    (i) => i.id === overContainer,
+                  )?.items;
                   if (currentContainerItems) {
                     return {
                       ...item,
-                      items: arrayMove(currentContainerItems, activeIndex, overIndex),
+                      items: arrayMove(
+                        currentContainerItems,
+                        activeIndex,
+                        overIndex,
+                      ),
                     };
                   }
                 }
                 return item;
-              })
+              }),
             );
             setActiveId(null);
             return;
@@ -536,7 +596,7 @@ export function KanbanBoard<T = Item>({
               cs && {
                 ...cs,
                 hasEnded: true,
-              }
+              },
           );
         }
 
@@ -556,9 +616,13 @@ export function KanbanBoard<T = Item>({
       >
         <SortableContext
           items={[...columns, PLACEHOLDER_ID]}
-          strategy={vertical ? verticalListSortingStrategy : horizontalListSortingStrategy}
+          strategy={
+            vertical
+              ? verticalListSortingStrategy
+              : horizontalListSortingStrategy
+          }
         >
-          {columns.map(({ id: containerId, name, items }) => (
+          {columns.map(({ id: containerId, name, items, metadata }) => (
             <DroppableContainer
               key={containerId}
               id={containerId}
@@ -569,6 +633,7 @@ export function KanbanBoard<T = Item>({
               unstyled={minimal}
               onEdit={() => onColumnEdit?.(containerId)}
               renderColumn={renderColumn}
+              columnMetadata={metadata}
             >
               <SortableContext items={items} strategy={strategy}>
                 {items.map((item, index) => {
@@ -616,14 +681,19 @@ export function KanbanBoard<T = Item>({
               : renderSortableItemDragOverlay(activeId)
             : null}
         </DragOverlay>,
-        document.body
+        document.body,
       )}
-      {trashable && activeId && !columns.some((c) => c.id === activeId) ? <Trash id={TRASH_ID} /> : null}
+      {trashable && activeId && !columns.some((c) => c.id === activeId) ? (
+        <Trash id={TRASH_ID} />
+      ) : null}
     </DndContext>
   );
 
   function renderSortableItemDragOverlay(id: UniqueIdentifier) {
-    const item = columns.find((i) => i.id === findContainer(id))?.items.find(({ id: _id }) => _id === id) || "";
+    const item =
+      columns
+        .find((i) => i.id === findContainer(id))
+        ?.items.find(({ id: _id }) => _id === id) || "";
     if (!item) return null;
     return (
       <Item
@@ -779,10 +849,19 @@ function SortableItem<T>({
   onItemClick,
   item,
 }: SortableItemProps<T>) {
-  const { setNodeRef, setActivatorNodeRef, listeners, isDragging, isSorting, over, overIndex, transform, transition } =
-    useSortable({
-      id,
-    });
+  const {
+    setNodeRef,
+    setActivatorNodeRef,
+    listeners,
+    isDragging,
+    isSorting,
+    over,
+    overIndex,
+    transform,
+    transition,
+  } = useSortable({
+    id,
+  });
   const mounted = useMountStatus();
   const mountedWhileDragging = isDragging && !mounted;
 
