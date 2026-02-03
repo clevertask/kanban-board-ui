@@ -7,6 +7,14 @@
   "files": [
     "dist"
   ],
+  "homepage": "https://github.com/clevertask/kanban-board-ui#readme",
+  "bugs": {
+    "url": "https://github.com/clevertask/kanban-board-ui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clevertask/kanban-board-ui"
+  },
   "main": "./dist/kanban-board-ui.js",
   "types": "./dist/index.d.ts",
   "scripts": {
