@@ -203,6 +203,8 @@ const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>(
 
 ## Helper Functions
 
+> Experimental: `moveItemToColumn`, `moveItemBefore`, `moveItemAfter`, and their `result` payload are still experimental and may change in future releases.
+
 ### `updateColumnItems`
 
 ```ts
