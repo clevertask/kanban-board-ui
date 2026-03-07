@@ -248,6 +248,7 @@ const { columns: nextColumns, result } = moveItemToColumn(
 
 Moves an item to a target column. If `targetIndex` is omitted, the item is appended at the end.
 Returns:
+
 - `columns`: updated columns state.
 - `result`: a `MovedItemState` payload (or `null` if no movement happened).
 
@@ -263,6 +264,7 @@ const { columns: nextColumns, result } = moveItemBefore(
 
 Moves an item before another item. Works within the same column or across columns.
 Returns:
+
 - `columns`: updated columns state.
 - `result`: a `MovedItemState` payload (or `null` if no movement happened).
 
@@ -278,6 +280,7 @@ const { columns: nextColumns, result } = moveItemAfter(
 
 Moves an item after another item. Works within the same column or across columns.
 Returns:
+
 - `columns`: updated columns state.
 - `result`: a `MovedItemState` payload (or `null` if no movement happened).
 
