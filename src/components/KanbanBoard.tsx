@@ -242,6 +242,7 @@ export function KanbanBoard<T = Item>({
   const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(
     null,
   );
+  const onItemMoveRef = useRef(onItemMove);
 
   const recentlyMovedToNewContainer = useRef(false);
   const lastOverId = useRef<UniqueIdentifier | null>(null);
@@ -377,10 +378,15 @@ export function KanbanBoard<T = Item>({
   }, [columns]);
 
   useEffect(() => {
+    onItemMoveRef.current = onItemMove;
+  }, [onItemMove]);
+
+  useEffect(() => {
     if (movedItemState && movedItemState.hasEnded) {
-      onItemMove(movedItemState);
+      onItemMoveRef.current(movedItemState);
+      setMovedItemState(null);
     }
-  }, [movedItemState, onItemMove]);
+  }, [movedItemState]);
 
   return (
     <DndContext
@@ -430,18 +436,22 @@ export function KanbanBoard<T = Item>({
             return;
           }
 
-          const activeItems = activeColumn.items;
-          const overItems = overColumn.items;
+          const activeItems = [...activeColumn.items];
+          const overItems = [...overColumn.items];
 
           const overIndex = overItems.findIndex(({ id }) => id === overId);
           const activeIndex = activeItems.findIndex(
             ({ id }) => id === active.id,
           );
 
+          if (activeIndex < 0) {
+            return;
+          }
+
           let newIndex: number;
 
           if (columns.some((i) => i.id === overId)) {
-            newIndex = overItems.length + 1;
+            newIndex = overItems.length;
           } else {
             const isBelowOverItem =
               over &&
@@ -451,8 +461,7 @@ export function KanbanBoard<T = Item>({
 
             const modifier = isBelowOverItem ? 1 : 0;
 
-            newIndex =
-              overIndex >= 0 ? overIndex + modifier : overItems.length + 1;
+            newIndex = overIndex >= 0 ? overIndex + modifier : overItems.length;
           }
 
           recentlyMovedToNewContainer.current = true;
@@ -477,7 +486,12 @@ export function KanbanBoard<T = Item>({
                 };
               } else if (column.id === overContainer) {
                 const newItems = [...overItems];
-                const [movedItem] = activeItems.splice(activeIndex, 1);
+                const movedItem = activeItems[activeIndex];
+
+                if (!movedItem) {
+                  return column;
+                }
+
                 newItems.splice(newIndex, 0, movedItem);
                 return {
                   ...column,
@@ -544,12 +558,19 @@ export function KanbanBoard<T = Item>({
             ?.items.map((i) => i.id)
             .indexOf(active.id);
 
-          const overIndex = columns
-            .find((i) => i.id === overContainer)
-            ?.items.map((i) => i.id)
-            .indexOf(overId);
+          const overContainerItems =
+            columns.find((i) => i.id === overContainer)?.items || [];
+          const overIndex = columns.some((i) => i.id === overId)
+            ? overContainerItems.findIndex((item) => item.id === active.id)
+            : overContainerItems.map((i) => i.id).indexOf(overId);
 
-          if (activeIndex === undefined || overIndex === undefined) {
+          if (
+            activeIndex === undefined ||
+            overIndex === undefined ||
+            activeIndex < 0 ||
+            overIndex < 0
+          ) {
+            setActiveId(null);
             return;
           }
 
@@ -591,13 +612,15 @@ export function KanbanBoard<T = Item>({
 
           // It applies when an item is moved from one column to another but, for
           // some reason, keeps the same index it had on the previous column:
-          setMovedItemState(
-            (cs) =>
-              cs && {
-                ...cs,
-                hasEnded: true,
-              },
-          );
+          if (activeIndex === overIndex) {
+            setMovedItemState(
+              (cs) =>
+                cs && {
+                  ...cs,
+                  hasEnded: true,
+                },
+            );
+          }
         }
 
         setActiveId(null);

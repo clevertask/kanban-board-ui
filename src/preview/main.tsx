@@ -7,6 +7,11 @@ import {
 } from "../components/KanbanBoard";
 import {
   removeColumnItem,
+  moveColumnAfter,
+  moveColumnBefore,
+  moveItemAfter,
+  moveItemBefore,
+  moveItemToColumn,
   updateColumnItems,
 } from "../utils/item-state-mutations";
 import { UniqueIdentifier } from "@dnd-kit/core";
@@ -16,42 +21,68 @@ function App() {
     Columns<{ metadata?: { foo: string } }>
   >([
     {
-      id: "1",
-      name: "A",
-      items: [{ id: "12", name: "A2" }],
-      metadata: { columnId: 4 },
+      id: "todo",
+      name: "To Do",
+      items: [
+        { id: "task-1", name: "Write API contract", metadata: { foo: "A" } },
+        { id: "task-2", name: "Create mobile modal", metadata: { foo: "B" } },
+      ],
+      metadata: { columnId: 1 },
     },
     {
-      id: "21",
-      name: "A2212",
-      items: [{ id: "12asdasda", name: "asA2", metadata: { foo: "2" } }],
-      metadata: { columnId: 222 },
+      id: "in-progress",
+      name: "In Progress",
+      items: [
+        { id: "task-3", name: "Implement helpers", metadata: { foo: "C" } },
+        { id: "task-4", name: "Connect UI buttons", metadata: { foo: "D" } },
+      ],
+      metadata: { columnId: 2 },
+    },
+    {
+      id: "qa",
+      name: "QA",
+      items: [],
+      metadata: { columnId: 3 },
+    },
+    {
+      id: "done",
+      name: "Done",
+      items: [{ id: "task-5", name: "Ship docs", metadata: { foo: "E" } }],
+      metadata: { columnId: 4 },
     },
   ]);
 
   const addNewItemToColumn = useCallback(() => {
-    const updateItems = updateColumnItems(columns, "1", (ci) => [
-      ...ci,
-      { id: Math.random().toString(), name: Math.random().toString() },
-    ]);
-    setColumns(updateItems);
-  }, [columns]);
+    setColumns((currentColumns) =>
+      updateColumnItems(currentColumns, "todo", (currentItems) => [
+        ...currentItems,
+        {
+          id: `task-${Math.random().toString(36).slice(2, 8)}`,
+          name: "Added externally",
+          metadata: { foo: "NEW" },
+        },
+      ]),
+    );
+  }, []);
 
   const handleOnAddColumn = (data: TOnAddColumnArgs) => {
+    console.log(data);
     if (data && data.item) {
-      const updatedItems = removeColumnItem(
-        columns,
-        data.fromContainer,
-        data.item.id,
-      );
-      setColumns(() => [
-        ...updatedItems,
-        {
-          id: Math.random().toString(),
-          name: Math.random().toString(),
-          items: [data.item!],
-        },
-      ]);
+      setColumns((currentColumns) => {
+        const updatedItems = removeColumnItem(
+          currentColumns,
+          data.fromContainer,
+          data.item.id,
+        );
+        return [
+          ...updatedItems,
+          {
+            id: Math.random().toString(),
+            name: Math.random().toString(),
+            items: [data.item],
+          },
+        ];
+      });
     } else {
       setColumns((ci) => [
         ...ci,
@@ -68,13 +99,87 @@ function App() {
     itemId: UniqueIdentifier;
     fromContainer: UniqueIdentifier;
   }) => {
-    const updatedItems = removeColumnItem(
-      columns,
-      result.fromContainer,
-      result.itemId,
+    setColumns((currentColumns) =>
+      removeColumnItem(currentColumns, result.fromContainer, result.itemId),
     );
-    setColumns(updatedItems);
   };
+
+  const moveTask4BeforeTask2 = useCallback(() => {
+    setColumns((currentColumns) => {
+      const { columns: nextColumns, result } = moveItemBefore(
+        currentColumns,
+        "task-4",
+        "task-2",
+      );
+      console.log("moveItemBefore result", result);
+      return nextColumns;
+    });
+  }, []);
+
+  const moveTask1AfterTask5 = useCallback(() => {
+    setColumns((currentColumns) => {
+      const { columns: nextColumns, result } = moveItemAfter(
+        currentColumns,
+        "task-1",
+        "task-5",
+      );
+      console.log("moveItemAfter result", result);
+      return nextColumns;
+    });
+  }, []);
+
+  const moveTask2ToQaTop = useCallback(() => {
+    setColumns((currentColumns) => {
+      const { columns: nextColumns, result } = moveItemToColumn(
+        currentColumns,
+        "task-2",
+        "qa",
+        0,
+      );
+      console.log("moveItemToColumn result", result);
+      return nextColumns;
+    });
+  }, []);
+
+  const moveDoneBeforeTodo = useCallback(() => {
+    setColumns((currentColumns) =>
+      moveColumnBefore(currentColumns, "done", "todo"),
+    );
+  }, []);
+
+  const moveTodoAfterInProgress = useCallback(() => {
+    setColumns((currentColumns) =>
+      moveColumnAfter(currentColumns, "todo", "in-progress"),
+    );
+  }, []);
+
+  const createBlockedAndMoveTask3 = useCallback(() => {
+    setColumns((currentColumns) => {
+      const blockedColumnId = "blocked";
+      const hasBlockedColumn = currentColumns.some(
+        (column) => column.id === blockedColumnId,
+      );
+      const withBlockedColumn = hasBlockedColumn
+        ? currentColumns
+        : [
+            ...currentColumns,
+            {
+              id: blockedColumnId,
+              name: "Blocked",
+              items: [],
+              metadata: { columnId: 999 },
+            },
+          ];
+
+      const { columns: nextColumns, result } = moveItemToColumn(
+        withBlockedColumn,
+        "task-3",
+        blockedColumnId,
+      );
+      console.log("createBlockedAndMoveTask3 result", result);
+      return nextColumns;
+    });
+  }, []);
 
   return (
     <>
@@ -139,9 +244,34 @@ function App() {
           );
         }}
       />
-      <button onClick={addNewItemToColumn}>
-        Add item to column externally
-      </button>
+      <div
+        style={{
+          display: "grid",
+          gap: "0.5rem",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          padding: "0 20px 20px",
+        }}
+      >
+        <button onClick={addNewItemToColumn}>Add item to To Do</button>
+        <button onClick={moveTask4BeforeTask2}>
+          moveItemBefore(task-4, task-2)
+        </button>
+        <button onClick={moveTask1AfterTask5}>
+          moveItemAfter(task-1, task-5)
+        </button>
+        <button onClick={moveTask2ToQaTop}>
+          moveItemToColumn(task-2, qa, 0)
+        </button>
+        <button onClick={moveDoneBeforeTodo}>
+          moveColumnBefore(done, todo)
+        </button>
+        <button onClick={moveTodoAfterInProgress}>
+          moveColumnAfter(todo, in-progress)
+        </button>
+        <button onClick={createBlockedAndMoveTask3}>
+          Create "Blocked" + move task-3
+        </button>
+      </div>
     </>
   );
 }

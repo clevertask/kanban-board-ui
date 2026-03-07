@@ -17,6 +17,11 @@ A React component for rendering and managing a kanban board with drag-and-drop f
   - [removeColumnItem](#removecolumnitem)
   - [removeColumn](#removecolumn)
   - [updateColumnName](#updatecolumnname)
+  - [moveItemToColumn](#moveitemtocolumn)
+  - [moveItemBefore](#moveitembefore)
+  - [moveItemAfter](#moveitemafter)
+  - [moveColumnBefore](#movecolumnbefore)
+  - [moveColumnAfter](#movecolumnafter)
 - [Roadmap](#roadmap)
 - [Release Process](#release-process)
 - [License](#license)
@@ -229,6 +234,70 @@ updateColumnName(columns, columnId, newName);
 ```
 
 Updates a column's name.
+
+### `moveItemToColumn`
+
+```ts
+const { columns: nextColumns, result } = moveItemToColumn(
+  columns,
+  itemId,
+  targetColumnId,
+  targetIndex?,
+);
+```
+
+Moves an item to a target column. If `targetIndex` is omitted, the item is appended at the end.
+Returns:
+- `columns`: updated columns state.
+- `result`: a `MovedItemState` payload (or `null` if no movement happened).
+
+### `moveItemBefore`
+
+```ts
+const { columns: nextColumns, result } = moveItemBefore(
+  columns,
+  sourceItemId,
+  targetItemId,
+);
+```
+
+Moves an item before another item. Works within the same column or across columns.
+Returns:
+- `columns`: updated columns state.
+- `result`: a `MovedItemState` payload (or `null` if no movement happened).
+
+### `moveItemAfter`
+
+```ts
+const { columns: nextColumns, result } = moveItemAfter(
+  columns,
+  sourceItemId,
+  targetItemId,
+);
+```
+
+Moves an item after another item. Works within the same column or across columns.
+Returns:
+- `columns`: updated columns state.
+- `result`: a `MovedItemState` payload (or `null` if no movement happened).
+
+> Note: `moveItemBefore` and `moveItemAfter` assume item IDs are unique across the whole board.
+
+### `moveColumnBefore`
+
+```ts
+moveColumnBefore(columns, sourceColumnId, targetColumnId);
+```
+
+Moves a column before another column.
+
+### `moveColumnAfter`
+
+```ts
+moveColumnAfter(columns, sourceColumnId, targetColumnId);
+```
+
+Moves a column after another column.
 
 ---
 
