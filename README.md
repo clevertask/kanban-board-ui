@@ -194,7 +194,7 @@ const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>(
 | `onItemClick`  | `(itemId: UniqueIdentifier) => void`                        | `undefined`  | Callback triggered when an item on the Kanban board is clicked. Typically used to display a modal or additional item details.                                 |
 | `onAddColumn`  | `(item: TOnAddColumnArgs) => void`                          | `undefined`  | Callback triggered when a new column is added. Provides information about the added item (if applicable) or triggers an action when the drop zone is clicked. |
 | `onColumnMove` | `({newIndex: number; columnId: UniqueIdentifier;}) => void` | `undefined`  | Callback triggered when a column is moved to a new position. Provides the column's `id` and its new index.                                                    |
-| `onItemMove`   | `(result: MovedItemState) => void`                          | `undefined`  | Callback triggered when an item is moved to another column or its position changes within the same column.                                                    |
+| `onItemMove`   | `(result: MovedItemState) => void`                          | `undefined`  | Callback triggered when an item is moved to another column or its position changes within the same column. `result` can include optional `beforeItemId` and `afterItemId` for neighbor-aware ranking. |
 | `onColumnEdit` | `(columnId: UniqueIdentifier): void`                        | `undefined`  | Callback triggered when a column is clicked for editing. Provides the column's `id`.                                                                          |
 | `renderItem`   | `({ item, ... }) => React.ReactElement`                     | `undefined`  | Custom render function for items. Gives full control over layout, styling, and drag handle behavior.                                                          |
 | `renderColumn` | `({ id, label, ... }) => React.ReactElement`                | `undefined`  | Custom render function for columns. Allows full control over column layout, including drag handle and header.                                                 |
@@ -252,7 +252,7 @@ Moves an item to a target column. If `targetIndex` is omitted, the item is appen
 Returns:
 
 - `columns`: updated columns state.
-- `result`: a `MovedItemState` payload (or `null` if no movement happened).
+- `result`: a `MovedItemState` payload (or `null` if no movement happened), including optional `beforeItemId` and `afterItemId` neighbor references.
 
 ### `moveItemBefore`
 
@@ -268,7 +268,7 @@ Moves an item before another item. Works within the same column or across column
 Returns:
 
 - `columns`: updated columns state.
-- `result`: a `MovedItemState` payload (or `null` if no movement happened).
+- `result`: a `MovedItemState` payload (or `null` if no movement happened), including optional `beforeItemId` and `afterItemId` neighbor references.
 
 ### `moveItemAfter`
 
@@ -284,25 +284,41 @@ Moves an item after another item. Works within the same column or across columns
 Returns:
 
 - `columns`: updated columns state.
-- `result`: a `MovedItemState` payload (or `null` if no movement happened).
+- `result`: a `MovedItemState` payload (or `null` if no movement happened), including optional `beforeItemId` and `afterItemId` neighbor references.
 
 > Note: `moveItemBefore` and `moveItemAfter` assume item IDs are unique across the whole board.
 
 ### `moveColumnBefore`
 
 ```ts
-moveColumnBefore(columns, sourceColumnId, targetColumnId);
+const { columns: nextColumns, result } = moveColumnBefore(
+  columns,
+  sourceColumnId,
+  targetColumnId,
+);
 ```
 
 Moves a column before another column.
+Returns:
+
+- `columns`: updated columns state.
+- `result`: column move payload (or `null` if no movement happened), including `columnId`, `newIndex`, and `beforeItemId`/`afterItemId` neighbor references.
 
 ### `moveColumnAfter`
 
 ```ts
-moveColumnAfter(columns, sourceColumnId, targetColumnId);
+const { columns: nextColumns, result } = moveColumnAfter(
+  columns,
+  sourceColumnId,
+  targetColumnId,
+);
 ```
 
 Moves a column after another column.
+Returns:
+
+- `columns`: updated columns state.
+- `result`: column move payload (or `null` if no movement happened), including `columnId`, `newIndex`, and `beforeItemId`/`afterItemId` neighbor references.
 
 ---
 

@@ -159,6 +159,8 @@ export interface MovedItemState {
   sourceColumnId: UniqueIdentifier;
   targetColumnId: UniqueIdentifier;
   hasEnded: boolean;
+  beforeItemId?: UniqueIdentifier | null;
+  afterItemId?: UniqueIdentifier | null;
 }
 export type ColumnRenderArgs = {
   id: UniqueIdentifier;
@@ -358,6 +360,16 @@ export function KanbanBoard<T = Item>({
 
     const column = columns.find((col) => col.id === containerId);
     return column ? column.items.findIndex((item) => item.id === id) : -1;
+  };
+
+  const getAdjacentItemIds = (
+    items: { id: UniqueIdentifier }[],
+    index: number,
+  ) => {
+    return {
+      beforeItemId: items[index - 1]?.id ?? null,
+      afterItemId: items[index + 1]?.id ?? null,
+    };
   };
 
   const onDragCancel = () => {
@@ -575,6 +587,12 @@ export function KanbanBoard<T = Item>({
           }
 
           if (activeIndex !== overIndex) {
+            const reorderedItems = arrayMove(
+              overContainerItems,
+              activeIndex,
+              overIndex,
+            );
+
             setMovedItemState(
               (cs) =>
                 cs && {
@@ -583,25 +601,17 @@ export function KanbanBoard<T = Item>({
                   newIndex: overIndex,
                   targetColumnId: overContainer,
                   hasEnded: true,
+                  ...getAdjacentItemIds(reorderedItems, overIndex),
                 },
             );
 
             setColumns((items) =>
               items.map((item) => {
                 if (item.id === overContainer) {
-                  const currentContainerItems = items.find(
-                    (i) => i.id === overContainer,
-                  )?.items;
-                  if (currentContainerItems) {
-                    return {
-                      ...item,
-                      items: arrayMove(
-                        currentContainerItems,
-                        activeIndex,
-                        overIndex,
-                      ),
-                    };
-                  }
+                  return {
+                    ...item,
+                    items: reorderedItems,
+                  };
                 }
                 return item;
               }),
@@ -617,7 +627,11 @@ export function KanbanBoard<T = Item>({
               (cs) =>
                 cs && {
                   ...cs,
+                  itemId: active.id,
+                  newIndex: overIndex,
+                  targetColumnId: overContainer,
                   hasEnded: true,
+                  ...getAdjacentItemIds(overContainerItems, overIndex),
                 },
             );
           }

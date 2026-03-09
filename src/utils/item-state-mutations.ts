@@ -6,6 +6,16 @@ export type ItemMoveMutationResult<T> = {
   columns: Columns<T>;
   result: MovedItemState | null;
 };
+export type ColumnMoveState = {
+  columnId: UniqueIdentifier;
+  newIndex: number;
+  beforeItemId: UniqueIdentifier | null;
+  afterItemId: UniqueIdentifier | null;
+};
+export type ColumnMoveMutationResult<T> = {
+  columns: Columns<T>;
+  result: ColumnMoveState | null;
+};
 
 export function updateColumnItems<T>(
   items: Columns<T>,
@@ -80,6 +90,26 @@ function clampIndex(index: number, max: number) {
   return Math.max(0, Math.min(index, max));
 }
 
+function getAdjacentItemIds<T>(
+  items: ColumnItem<T>[],
+  index: number,
+): Pick<MovedItemState, "beforeItemId" | "afterItemId"> {
+  return {
+    beforeItemId: items[index - 1]?.id ?? null,
+    afterItemId: items[index + 1]?.id ?? null,
+  };
+}
+
+function getAdjacentColumnIds<T>(
+  columns: Columns<T>,
+  index: number,
+): Pick<ColumnMoveState, "beforeItemId" | "afterItemId"> {
+  return {
+    beforeItemId: columns[index - 1]?.id ?? null,
+    afterItemId: columns[index + 1]?.id ?? null,
+  };
+}
+
 /**
  * Moves an item to a given column and inserts it at `targetIndex`.
  *
@@ -150,6 +180,7 @@ export function moveItemToColumn<T>(
         targetColumnId: targetColumnId,
         newIndex: insertionIndex,
         hasEnded: true,
+        ...getAdjacentItemIds(sourceItems, insertionIndex),
       },
     };
   }
@@ -188,6 +219,7 @@ export function moveItemToColumn<T>(
       targetColumnId: targetColumnId,
       newIndex: insertionIndex,
       hasEnded: true,
+      ...getAdjacentItemIds(targetItems, insertionIndex),
     },
   };
 }
@@ -265,23 +297,32 @@ function moveColumnRelative<T>(
   sourceColumnId: UniqueIdentifier,
   targetColumnId: UniqueIdentifier,
   position: "before" | "after",
-) {
+): ColumnMoveMutationResult<T> {
   if (sourceColumnId === targetColumnId) {
-    return columns;
+    return {
+      columns,
+      result: null,
+    };
   }
 
   const sourceIndex = columns.findIndex((column) => column.id === sourceColumnId);
   const targetIndex = columns.findIndex((column) => column.id === targetColumnId);
 
   if (sourceIndex === -1 || targetIndex === -1) {
-    return columns;
+    return {
+      columns,
+      result: null,
+    };
   }
 
   const updatedColumns = [...columns];
   const [sourceColumn] = updatedColumns.splice(sourceIndex, 1);
 
   if (!sourceColumn) {
-    return columns;
+    return {
+      columns,
+      result: null,
+    };
   }
 
   const newTargetIndex = updatedColumns.findIndex(
@@ -289,7 +330,10 @@ function moveColumnRelative<T>(
   );
 
   if (newTargetIndex === -1) {
-    return columns;
+    return {
+      columns,
+      result: null,
+    };
   }
 
   const insertionIndex =
@@ -297,7 +341,14 @@ function moveColumnRelative<T>(
 
   updatedColumns.splice(insertionIndex, 0, sourceColumn);
 
-  return updatedColumns;
+  return {
+    columns: updatedColumns,
+    result: {
+      columnId: sourceColumnId,
+      newIndex: insertionIndex,
+      ...getAdjacentColumnIds(updatedColumns, insertionIndex),
+    },
+  };
 }
 
 /**
@@ -307,7 +358,7 @@ export function moveColumnBefore<T>(
   columns: Columns<T>,
   sourceColumnId: UniqueIdentifier,
   targetColumnId: UniqueIdentifier,
-) {
+): ColumnMoveMutationResult<T> {
   return moveColumnRelative(columns, sourceColumnId, targetColumnId, "before");
 }
 
@@ -318,6 +369,6 @@ export function moveColumnAfter<T>(
   columns: Columns<T>,
   sourceColumnId: UniqueIdentifier,
   targetColumnId: UniqueIdentifier,
-) {
+): ColumnMoveMutationResult<T> {
   return moveColumnRelative(columns, sourceColumnId, targetColumnId, "after");
 }

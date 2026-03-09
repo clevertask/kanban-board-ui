@@ -142,15 +142,27 @@ function App() {
   }, []);
 
   const moveDoneBeforeTodo = useCallback(() => {
-    setColumns((currentColumns) =>
-      moveColumnBefore(currentColumns, "done", "todo"),
-    );
+    setColumns((currentColumns) => {
+      const { columns: nextColumns, result } = moveColumnBefore(
+        currentColumns,
+        "done",
+        "todo",
+      );
+      console.log("moveColumnBefore result", result);
+      return nextColumns;
+    });
   }, []);
 
   const moveTodoAfterInProgress = useCallback(() => {
-    setColumns((currentColumns) =>
-      moveColumnAfter(currentColumns, "todo", "in-progress"),
-    );
+    setColumns((currentColumns) => {
+      const { columns: nextColumns, result } = moveColumnAfter(
+        currentColumns,
+        "todo",
+        "in-progress",
+      );
+      console.log("moveColumnAfter result", result);
+      return nextColumns;
+    });
   }, []);
 
   const createBlockedAndMoveTask3 = useCallback(() => {
