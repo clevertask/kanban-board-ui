@@ -21,7 +21,10 @@ export interface ContainerProps {
   onEdit?(): void;
 }
 
-export const Container = forwardRef<((node: HTMLElement | null) => void) | undefined, ContainerProps>(
+export const Container = forwardRef<
+  ((node: HTMLElement | null) => void) | undefined,
+  ContainerProps
+>(
   (
     {
       children,
@@ -39,7 +42,7 @@ export const Container = forwardRef<((node: HTMLElement | null) => void) | undef
       unstyled,
       ...props
     }: ContainerProps,
-    ref
+    ref,
   ) => {
     const Component = onClick ? "button" : "div";
 
@@ -60,7 +63,7 @@ export const Container = forwardRef<((node: HTMLElement | null) => void) | undef
           hover && styles.hover,
           placeholder && styles.placeholder,
           scrollable && styles.scrollable,
-          shadow && styles.shadow
+          shadow && styles.shadow,
         )}
         onClick={onClick}
         tabIndex={onClick ? 0 : undefined}
@@ -77,5 +80,5 @@ export const Container = forwardRef<((node: HTMLElement | null) => void) | undef
         {placeholder ? children : <ul>{children}</ul>}
       </Component>
     );
-  }
+  },
 );

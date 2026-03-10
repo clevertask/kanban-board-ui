@@ -1,10 +1,6 @@
 import { StrictMode, useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
-import {
-  Columns,
-  KanbanBoard,
-  TOnAddColumnArgs,
-} from "../components/KanbanBoard";
+import { Columns, KanbanBoard, TOnAddColumnArgs } from "../components/KanbanBoard";
 import {
   removeColumnItem,
   moveColumnAfter,
@@ -17,9 +13,7 @@ import {
 import { UniqueIdentifier } from "@dnd-kit/core";
 
 function App() {
-  const [columns, setColumns] = useState<
-    Columns<{ metadata?: { foo: string } }>
-  >([
+  const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>([
     {
       id: "todo",
       name: "To Do",
@@ -69,11 +63,7 @@ function App() {
     console.log(data);
     if (data && data.item) {
       setColumns((currentColumns) => {
-        const updatedItems = removeColumnItem(
-          currentColumns,
-          data.fromContainer,
-          data.item.id,
-        );
+        const updatedItems = removeColumnItem(currentColumns, data.fromContainer, data.item.id);
         return [
           ...updatedItems,
           {
@@ -106,11 +96,7 @@ function App() {
 
   const moveTask4BeforeTask2 = useCallback(() => {
     setColumns((currentColumns) => {
-      const { columns: nextColumns, result } = moveItemBefore(
-        currentColumns,
-        "task-4",
-        "task-2",
-      );
+      const { columns: nextColumns, result } = moveItemBefore(currentColumns, "task-4", "task-2");
       console.log("moveItemBefore result", result);
       return nextColumns;
     });
@@ -118,11 +104,7 @@ function App() {
 
   const moveTask1AfterTask5 = useCallback(() => {
     setColumns((currentColumns) => {
-      const { columns: nextColumns, result } = moveItemAfter(
-        currentColumns,
-        "task-1",
-        "task-5",
-      );
+      const { columns: nextColumns, result } = moveItemAfter(currentColumns, "task-1", "task-5");
       console.log("moveItemAfter result", result);
       return nextColumns;
     });
@@ -130,12 +112,7 @@ function App() {
 
   const moveTask2ToQaTop = useCallback(() => {
     setColumns((currentColumns) => {
-      const { columns: nextColumns, result } = moveItemToColumn(
-        currentColumns,
-        "task-2",
-        "qa",
-        0,
-      );
+      const { columns: nextColumns, result } = moveItemToColumn(currentColumns, "task-2", "qa", 0);
       console.log("moveItemToColumn result", result);
       return nextColumns;
     });
@@ -143,11 +120,7 @@ function App() {
 
   const moveDoneBeforeTodo = useCallback(() => {
     setColumns((currentColumns) => {
-      const { columns: nextColumns, result } = moveColumnBefore(
-        currentColumns,
-        "done",
-        "todo",
-      );
+      const { columns: nextColumns, result } = moveColumnBefore(currentColumns, "done", "todo");
       console.log("moveColumnBefore result", result);
       return nextColumns;
     });
@@ -168,9 +141,7 @@ function App() {
   const createBlockedAndMoveTask3 = useCallback(() => {
     setColumns((currentColumns) => {
       const blockedColumnId = "blocked";
-      const hasBlockedColumn = currentColumns.some(
-        (column) => column.id === blockedColumnId,
-      );
+      const hasBlockedColumn = currentColumns.some((column) => column.id === blockedColumnId);
       const withBlockedColumn = hasBlockedColumn
         ? currentColumns
         : [
@@ -223,14 +194,7 @@ function App() {
             </div>
           );
         }}
-        renderItem={({
-          item,
-          dragging,
-          onItemClick,
-          dragListeners,
-          ref,
-          styleLayout,
-        }) => {
+        renderItem={({ item, dragging, onItemClick, dragListeners, ref, styleLayout }) => {
           return (
             <li
               ref={ref}
@@ -265,24 +229,12 @@ function App() {
         }}
       >
         <button onClick={addNewItemToColumn}>Add item to To Do</button>
-        <button onClick={moveTask4BeforeTask2}>
-          moveItemBefore(task-4, task-2)
-        </button>
-        <button onClick={moveTask1AfterTask5}>
-          moveItemAfter(task-1, task-5)
-        </button>
-        <button onClick={moveTask2ToQaTop}>
-          moveItemToColumn(task-2, qa, 0)
-        </button>
-        <button onClick={moveDoneBeforeTodo}>
-          moveColumnBefore(done, todo)
-        </button>
-        <button onClick={moveTodoAfterInProgress}>
-          moveColumnAfter(todo, in-progress)
-        </button>
-        <button onClick={createBlockedAndMoveTask3}>
-          Create "Blocked" + move task-3
-        </button>
+        <button onClick={moveTask4BeforeTask2}>moveItemBefore(task-4, task-2)</button>
+        <button onClick={moveTask1AfterTask5}>moveItemAfter(task-1, task-5)</button>
+        <button onClick={moveTask2ToQaTop}>moveItemToColumn(task-2, qa, 0)</button>
+        <button onClick={moveDoneBeforeTodo}>moveColumnBefore(done, todo)</button>
+        <button onClick={moveTodoAfterInProgress}>moveColumnAfter(todo, in-progress)</button>
+        <button onClick={createBlockedAndMoveTask3}>Create "Blocked" + move task-3</button>
       </div>
     </>
   );
