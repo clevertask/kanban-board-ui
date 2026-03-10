@@ -74,9 +74,7 @@ function findItemLocation<T>(
   itemId: UniqueIdentifier,
 ): { columnIndex: number; itemIndex: number } | null {
   for (let columnIndex = 0; columnIndex < columns.length; columnIndex++) {
-    const itemIndex = columns[columnIndex].items.findIndex(
-      (item) => item.id === itemId,
-    );
+    const itemIndex = columns[columnIndex].items.findIndex((item) => item.id === itemId);
 
     if (itemIndex !== -1) {
       return { columnIndex, itemIndex };
@@ -123,9 +121,7 @@ export function moveItemToColumn<T>(
   targetIndex?: number,
 ): ItemMoveMutationResult<T> {
   const sourceLocation = findItemLocation(columns, itemId);
-  const targetColumnIndex = columns.findIndex(
-    (column) => column.id === targetColumnId,
-  );
+  const targetColumnIndex = columns.findIndex((column) => column.id === targetColumnId);
 
   if (!sourceLocation || targetColumnIndex === -1) {
     return {
@@ -148,10 +144,7 @@ export function moveItemToColumn<T>(
   if (sourceLocation.columnIndex === targetColumnIndex) {
     let insertionIndex = targetIndex ?? sourceItems.length;
 
-    if (
-      targetIndex !== undefined &&
-      sourceLocation.itemIndex < insertionIndex
-    ) {
+    if (targetIndex !== undefined && sourceLocation.itemIndex < insertionIndex) {
       insertionIndex -= 1;
     }
 
@@ -167,9 +160,7 @@ export function moveItemToColumn<T>(
     sourceItems.splice(insertionIndex, 0, movedItem);
 
     const nextColumns = columns.map((column, index) =>
-      index === sourceLocation.columnIndex
-        ? { ...column, items: sourceItems }
-        : column,
+      index === sourceLocation.columnIndex ? { ...column, items: sourceItems } : column,
     );
 
     return {
@@ -186,10 +177,7 @@ export function moveItemToColumn<T>(
   }
 
   const targetItems = [...columns[targetColumnIndex].items];
-  const insertionIndex = clampIndex(
-    targetIndex ?? targetItems.length,
-    targetItems.length,
-  );
+  const insertionIndex = clampIndex(targetIndex ?? targetItems.length, targetItems.length);
 
   targetItems.splice(insertionIndex, 0, movedItem);
 
@@ -250,12 +238,7 @@ export function moveItemBefore<T>(
 
   const targetColumnId = columns[targetLocation.columnIndex].id;
 
-  return moveItemToColumn(
-    columns,
-    sourceItemId,
-    targetColumnId,
-    targetLocation.itemIndex,
-  );
+  return moveItemToColumn(columns, sourceItemId, targetColumnId, targetLocation.itemIndex);
 }
 
 /**
@@ -284,12 +267,7 @@ export function moveItemAfter<T>(
 
   const targetColumnId = columns[targetLocation.columnIndex].id;
 
-  return moveItemToColumn(
-    columns,
-    sourceItemId,
-    targetColumnId,
-    targetLocation.itemIndex + 1,
-  );
+  return moveItemToColumn(columns, sourceItemId, targetColumnId, targetLocation.itemIndex + 1);
 }
 
 function moveColumnRelative<T>(
@@ -325,9 +303,7 @@ function moveColumnRelative<T>(
     };
   }
 
-  const newTargetIndex = updatedColumns.findIndex(
-    (column) => column.id === targetColumnId,
-  );
+  const newTargetIndex = updatedColumns.findIndex((column) => column.id === targetColumnId);
 
   if (newTargetIndex === -1) {
     return {
@@ -336,8 +312,7 @@ function moveColumnRelative<T>(
     };
   }
 
-  const insertionIndex =
-    position === "before" ? newTargetIndex : newTargetIndex + 1;
+  const insertionIndex = position === "before" ? newTargetIndex : newTargetIndex + 1;
 
   updatedColumns.splice(insertionIndex, 0, sourceColumn);
 

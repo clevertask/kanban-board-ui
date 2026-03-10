@@ -133,20 +133,18 @@ You can extend the default item structure using generics. This allows you to pas
 #### Example: Adding Metadata to Items
 
 ```tsx
-const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>(
-  [
-    {
-      id: "1",
-      name: "To Do",
-      items: [{ id: "1.1", name: "Task A" }],
-    },
-    {
-      id: "2",
-      name: "In Progress",
-      items: [{ id: "2.1", name: "Task B", metadata: { foo: "🔥" } }],
-    },
-  ],
-);
+const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>([
+  {
+    id: "1",
+    name: "To Do",
+    items: [{ id: "1.1", name: "Task A" }],
+  },
+  {
+    id: "2",
+    name: "In Progress",
+    items: [{ id: "2.1", name: "Task B", metadata: { foo: "🔥" } }],
+  },
+]);
 ```
 
 Then in your `renderItem`:
@@ -185,19 +183,19 @@ const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>(
 
 ## Props
 
-| Prop           | Type                                                        | Default      | Description                                                                                                                                                   |
-| -------------- | ----------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `columns`      | `Columns`                                                   | **Required** | An array of column objects to be rendered on the Kanban board. Each column includes its `id`, `name`, and `items` array.                                      |
-| `setColumns`   | `React.Dispatch<React.SetStateAction<Columns>>`             | **Required** | A callback function triggered when the columns array changes, allowing the parent component to manage state updates.                                          |
-| `trashable`    | `boolean`                                                   | `false`      | Enables a special drop zone where items can be dropped to delete them.                                                                                        |
-| `onItemRemove` | `(result: TOnItemRemoveArgs) => void`                       | `undefined`  | Callback triggered after an item has been dropped into the trashable drop zone. Provides the `itemId` and source column.                                      |
-| `onItemClick`  | `(itemId: UniqueIdentifier) => void`                        | `undefined`  | Callback triggered when an item on the Kanban board is clicked. Typically used to display a modal or additional item details.                                 |
-| `onAddColumn`  | `(item: TOnAddColumnArgs) => void`                          | `undefined`  | Callback triggered when a new column is added. Provides information about the added item (if applicable) or triggers an action when the drop zone is clicked. |
-| `onColumnMove` | `({newIndex: number; columnId: UniqueIdentifier;}) => void` | `undefined`  | Callback triggered when a column is moved to a new position. Provides the column's `id` and its new index.                                                    |
+| Prop           | Type                                                        | Default      | Description                                                                                                                                                                                           |
+| -------------- | ----------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `columns`      | `Columns`                                                   | **Required** | An array of column objects to be rendered on the Kanban board. Each column includes its `id`, `name`, and `items` array.                                                                              |
+| `setColumns`   | `React.Dispatch<React.SetStateAction<Columns>>`             | **Required** | A callback function triggered when the columns array changes, allowing the parent component to manage state updates.                                                                                  |
+| `trashable`    | `boolean`                                                   | `false`      | Enables a special drop zone where items can be dropped to delete them.                                                                                                                                |
+| `onItemRemove` | `(result: TOnItemRemoveArgs) => void`                       | `undefined`  | Callback triggered after an item has been dropped into the trashable drop zone. Provides the `itemId` and source column.                                                                              |
+| `onItemClick`  | `(itemId: UniqueIdentifier) => void`                        | `undefined`  | Callback triggered when an item on the Kanban board is clicked. Typically used to display a modal or additional item details.                                                                         |
+| `onAddColumn`  | `(item: TOnAddColumnArgs) => void`                          | `undefined`  | Callback triggered when a new column is added. Provides information about the added item (if applicable) or triggers an action when the drop zone is clicked.                                         |
+| `onColumnMove` | `({newIndex: number; columnId: UniqueIdentifier;}) => void` | `undefined`  | Callback triggered when a column is moved to a new position. Provides the column's `id` and its new index.                                                                                            |
 | `onItemMove`   | `(result: MovedItemState) => void`                          | `undefined`  | Callback triggered when an item is moved to another column or its position changes within the same column. `result` can include optional `beforeItemId` and `afterItemId` for neighbor-aware ranking. |
-| `onColumnEdit` | `(columnId: UniqueIdentifier): void`                        | `undefined`  | Callback triggered when a column is clicked for editing. Provides the column's `id`.                                                                          |
-| `renderItem`   | `({ item, ... }) => React.ReactElement`                     | `undefined`  | Custom render function for items. Gives full control over layout, styling, and drag handle behavior.                                                          |
-| `renderColumn` | `({ id, label, ... }) => React.ReactElement`                | `undefined`  | Custom render function for columns. Allows full control over column layout, including drag handle and header.                                                 |
+| `onColumnEdit` | `(columnId: UniqueIdentifier): void`                        | `undefined`  | Callback triggered when a column is clicked for editing. Provides the column's `id`.                                                                                                                  |
+| `renderItem`   | `({ item, ... }) => React.ReactElement`                     | `undefined`  | Custom render function for items. Gives full control over layout, styling, and drag handle behavior.                                                                                                  |
+| `renderColumn` | `({ id, label, ... }) => React.ReactElement`                | `undefined`  | Custom render function for columns. Allows full control over column layout, including drag handle and header.                                                                                         |
 
 ---
 
@@ -257,11 +255,7 @@ Returns:
 ### `moveItemBefore`
 
 ```ts
-const { columns: nextColumns, result } = moveItemBefore(
-  columns,
-  sourceItemId,
-  targetItemId,
-);
+const { columns: nextColumns, result } = moveItemBefore(columns, sourceItemId, targetItemId);
 ```
 
 Moves an item before another item. Works within the same column or across columns.
@@ -273,11 +267,7 @@ Returns:
 ### `moveItemAfter`
 
 ```ts
-const { columns: nextColumns, result } = moveItemAfter(
-  columns,
-  sourceItemId,
-  targetItemId,
-);
+const { columns: nextColumns, result } = moveItemAfter(columns, sourceItemId, targetItemId);
 ```
 
 Moves an item after another item. Works within the same column or across columns.
@@ -291,11 +281,7 @@ Returns:
 ### `moveColumnBefore`
 
 ```ts
-const { columns: nextColumns, result } = moveColumnBefore(
-  columns,
-  sourceColumnId,
-  targetColumnId,
-);
+const { columns: nextColumns, result } = moveColumnBefore(columns, sourceColumnId, targetColumnId);
 ```
 
 Moves a column before another column.
@@ -307,11 +293,7 @@ Returns:
 ### `moveColumnAfter`
 
 ```ts
-const { columns: nextColumns, result } = moveColumnAfter(
-  columns,
-  sourceColumnId,
-  targetColumnId,
-);
+const { columns: nextColumns, result } = moveColumnAfter(columns, sourceColumnId, targetColumnId);
 ```
 
 Moves a column after another column.

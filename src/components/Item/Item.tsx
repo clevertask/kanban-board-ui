@@ -74,7 +74,7 @@ export const Item = React.memo(
         item,
         ...props
       },
-      ref
+      ref,
     ) => {
       useEffect(() => {
         if (!dragOverlay) {
@@ -121,7 +121,7 @@ export const Item = React.memo(
             styles.Wrapper,
             fadeIn && styles.fadeIn,
             sorting && styles.sorting,
-            dragOverlay && styles.dragOverlay
+            dragOverlay && styles.dragOverlay,
           )}
           style={
             {
@@ -144,7 +144,7 @@ export const Item = React.memo(
               handle && styles.withHandle,
               dragOverlay && styles.dragOverlay,
               disabled && styles.disabled,
-              color && styles.color
+              color && styles.color,
             )}
             style={style}
             data-cypress="draggable-item"
@@ -160,6 +160,6 @@ export const Item = React.memo(
           </div>
         </li>
       );
-    }
-  )
+    },
+  ),
 );
