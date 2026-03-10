@@ -137,7 +137,7 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
-export type BaseItem = { id: UniqueIdentifier; name: string };
+export type BaseItem = { id: UniqueIdentifier; name?: string };
 export type Item<ExtendedProps = BaseItem> = BaseItem & ExtendedProps;
 export type Columns<T = Item> = {
   id: UniqueIdentifier;
