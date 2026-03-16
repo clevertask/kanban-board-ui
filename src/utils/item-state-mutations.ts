@@ -16,6 +16,15 @@ export type ColumnMoveMutationResult<T> = {
   columns: Columns<T>;
   result: ColumnMoveState | null;
 };
+export type BulkItemMoveMutationResult<T> = {
+  columns: Columns<T>;
+  /**
+   * Ordered the same way the caller should persist the operations.
+   * For `moveItemsBefore`, this is intentionally reverse visual order so
+   * each subsequent move can anchor to the item that was just positioned.
+   */
+  results: MovedItemState[];
+};
 
 export function updateColumnItems<T>(
   items: Columns<T>,
@@ -86,6 +95,28 @@ function findItemLocation<T>(
 
 function clampIndex(index: number, max: number) {
   return Math.max(0, Math.min(index, max));
+}
+
+function getOrderedUniqueItemIdsInVisualOrder<T>(
+  columns: Columns<T>,
+  itemIds: UniqueIdentifier[],
+): UniqueIdentifier[] {
+  const requestedIds = new Set(itemIds);
+  const seenIds = new Set<UniqueIdentifier>();
+  const orderedIds: UniqueIdentifier[] = [];
+
+  for (const column of columns) {
+    for (const item of column.items) {
+      if (!requestedIds.has(item.id) || seenIds.has(item.id)) {
+        continue;
+      }
+
+      seenIds.add(item.id);
+      orderedIds.push(item.id);
+    }
+  }
+
+  return orderedIds;
 }
 
 function getAdjacentItemIds<T>(
@@ -268,6 +299,96 @@ export function moveItemAfter<T>(
   const targetColumnId = columns[targetLocation.columnIndex].id;
 
   return moveItemToColumn(columns, sourceItemId, targetColumnId, targetLocation.itemIndex + 1);
+}
+
+function moveItemsRelative<T>(
+  columns: Columns<T>,
+  sourceItemIds: UniqueIdentifier[],
+  targetItemId: UniqueIdentifier,
+  position: "before" | "after",
+): BulkItemMoveMutationResult<T> {
+  if (!findItemLocation(columns, targetItemId)) {
+    return {
+      columns,
+      results: [],
+    };
+  }
+
+  const orderedSourceItemIds = getOrderedUniqueItemIdsInVisualOrder(columns, sourceItemIds).filter(
+    (itemId) => itemId !== targetItemId,
+  );
+
+  if (!orderedSourceItemIds.length) {
+    return {
+      columns,
+      results: [],
+    };
+  }
+
+  let nextColumns = columns;
+  const results: MovedItemState[] = [];
+
+  if (position === "before") {
+    let anchorItemId = targetItemId;
+
+    for (let index = orderedSourceItemIds.length - 1; index >= 0; index -= 1) {
+      const itemId = orderedSourceItemIds[index];
+      const moveResult = moveItemBefore(nextColumns, itemId, anchorItemId);
+
+      nextColumns = moveResult.columns;
+      if (moveResult.result) {
+        results.push(moveResult.result);
+      }
+
+      anchorItemId = itemId;
+    }
+  } else {
+    let anchorItemId = targetItemId;
+
+    for (const itemId of orderedSourceItemIds) {
+      const moveResult = moveItemAfter(nextColumns, itemId, anchorItemId);
+
+      nextColumns = moveResult.columns;
+      if (moveResult.result) {
+        results.push(moveResult.result);
+      }
+
+      anchorItemId = itemId;
+    }
+  }
+
+  return {
+    columns: nextColumns,
+    results,
+  };
+}
+
+/**
+ * Moves `sourceItemIds` as a visual block before `targetItemId`.
+ *
+ * Results are returned in the order they should be persisted. This means the
+ * returned `results` array is intentionally reverse visual order when moving
+ * items before a target.
+ */
+export function moveItemsBefore<T>(
+  columns: Columns<T>,
+  sourceItemIds: UniqueIdentifier[],
+  targetItemId: UniqueIdentifier,
+): BulkItemMoveMutationResult<T> {
+  return moveItemsRelative(columns, sourceItemIds, targetItemId, "before");
+}
+
+/**
+ * Moves `sourceItemIds` as a visual block after `targetItemId`.
+ *
+ * Results are returned in the order they should be persisted.
+ */
+export function moveItemsAfter<T>(
+  columns: Columns<T>,
+  sourceItemIds: UniqueIdentifier[],
+  targetItemId: UniqueIdentifier,
+): BulkItemMoveMutationResult<T> {
+  return moveItemsRelative(columns, sourceItemIds, targetItemId, "after");
 }
 
 function moveColumnRelative<T>(
