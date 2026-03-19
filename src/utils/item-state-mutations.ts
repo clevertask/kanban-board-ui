@@ -391,6 +391,53 @@ export function moveItemsAfter<T>(
   return moveItemsRelative(columns, sourceItemIds, targetItemId, "after");
 }
 
+/**
+ * Moves `sourceItemIds` to the end of `targetColumnId` while preserving
+ * their visual order across the board.
+ *
+ * Results are returned in the order they should be persisted.
+ */
+export function moveItemsToColumn<T>(
+  columns: Columns<T>,
+  sourceItemIds: UniqueIdentifier[],
+  targetColumnId: UniqueIdentifier,
+): BulkItemMoveMutationResult<T> {
+  const targetColumnExists = columns.some((column) => column.id === targetColumnId);
+
+  if (!targetColumnExists) {
+    return {
+      columns,
+      results: [],
+    };
+  }
+
+  const orderedSourceItemIds = getOrderedUniqueItemIdsInVisualOrder(columns, sourceItemIds);
+
+  if (!orderedSourceItemIds.length) {
+    return {
+      columns,
+      results: [],
+    };
+  }
+
+  let nextColumns = columns;
+  const results: MovedItemState[] = [];
+
+  for (const itemId of orderedSourceItemIds) {
+    const moveResult = moveItemToColumn(nextColumns, itemId, targetColumnId);
+
+    nextColumns = moveResult.columns;
+    if (moveResult.result) {
+      results.push(moveResult.result);
+    }
+  }
+
+  return {
+    columns: nextColumns,
+    results,
+  };
+}
+
 function moveColumnRelative<T>(
   columns: Columns<T>,
   sourceColumnId: UniqueIdentifier,
