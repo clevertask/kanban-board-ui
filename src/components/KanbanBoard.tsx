@@ -34,6 +34,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { coordinateGetter as multipleContainersCoordinateGetter } from "../utils/multipleContainerKeyboardCoordinates";
+import type { ColumnMoveState } from "../utils/item-state-mutations";
 import { Item } from "./Item";
 import { Container, ContainerProps } from "./Container";
 import { ItemProps } from "./Item/Item";
@@ -176,7 +177,7 @@ export interface Props<ExtendedItem = Item> {
   }): React.CSSProperties;
   wrapperStyle?(args: { index: number }): React.CSSProperties;
   onItemMove(result: MovedItemState): void;
-  onColumnMove?(result: { newIndex: number; columnId: UniqueIdentifier }): void;
+  onColumnMove?(result: ColumnMoveState): void;
   onAddColumn?(item: TOnAddColumnArgs): void;
   onColumnEdit?(columnId: UniqueIdentifier): void;
   onItemClick?(itemId: UniqueIdentifier): void;
@@ -490,8 +491,21 @@ export function KanbanBoard<T = Item>({
           const activeIndex = columns.map(({ id }) => id).indexOf(active.id);
           const overIndex = columns.map(({ id }) => id).indexOf(over.id);
 
-          onColumnMove?.({ newIndex: overIndex, columnId: active.id });
-          setColumns((containers) => arrayMove(containers, activeIndex, overIndex));
+          if (activeIndex === -1 || overIndex === -1 || activeIndex === overIndex) {
+            setActiveId(null);
+            return;
+          }
+
+          const nextColumns = arrayMove(columns, activeIndex, overIndex);
+
+          onColumnMove?.({
+            newIndex: overIndex,
+            columnId: active.id,
+            previousColumnId: nextColumns[overIndex - 1]?.id ?? null,
+            nextColumnId: nextColumns[overIndex + 1]?.id ?? null,
+          });
+          setColumns(nextColumns);
+          setActiveId(null);
           return;
         }
 
