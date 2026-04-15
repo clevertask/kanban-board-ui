@@ -61,11 +61,14 @@ function App() {
     <KanbanBoard
       columns={columns}
       setColumns={setColumns}
+      dragOverlayPortalContainer={document.getElementById("app-theme-portal-root")}
       onItemClick={(itemId) => console.log("Clicked", itemId)}
     />
   );
 }
 ```
+
+Use `dragOverlayPortalContainer` when your custom `renderItem` or `renderColumn` relies on styles or CSS variables from a specific app subtree, such as a Radix `Theme` wrapper. When omitted, the drag overlay is portaled to `document.body`.
 
 ---
 
@@ -196,6 +199,7 @@ const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>(
 | `onColumnEdit` | `(columnId: UniqueIdentifier): void`                                                                                                                      | `undefined`  | Callback triggered when a column is clicked for editing. Provides the column's `id`.                                                                                                                  |
 | `renderItem`   | `({ item, ... }) => React.ReactElement`                                                                                                                   | `undefined`  | Custom render function for items. Gives full control over layout, styling, and drag handle behavior.                                                                                                  |
 | `renderColumn` | `({ id, label, ... }) => React.ReactElement`                                                                                                              | `undefined`  | Custom render function for columns. Allows full control over column layout, including drag handle and header.                                                                                         |
+| `dragOverlayPortalContainer` | `Element \| DocumentFragment \| null`                                                                                                              | `document.body` | Optional DOM container for the drag overlay portal. Useful when custom rendered items or columns must stay inside a themed or styled subtree.                                                        |
 
 ---
 

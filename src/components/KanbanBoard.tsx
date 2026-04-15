@@ -165,6 +165,11 @@ export interface Props<ExtendedItem = Item> {
   adjustScale?: boolean;
   cancelDrop?: CancelDrop;
   containerStyle?: React.CSSProperties;
+  /**
+   * Optional DOM container for the drag overlay portal.
+   * Defaults to document.body when omitted.
+   */
+  dragOverlayPortalContainer?: Element | DocumentFragment | null;
   coordinateGetter?: KeyboardCoordinateGetter;
   getItemStyles?(args: {
     value: UniqueIdentifier;
@@ -224,6 +229,7 @@ export function KanbanBoard<T = Item>({
   onAddColumn,
   onColumnEdit,
   onItemClick,
+  dragOverlayPortalContainer,
 }: Props<T>) {
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(null);
@@ -690,7 +696,7 @@ export function KanbanBoard<T = Item>({
               : renderSortableItemDragOverlay(activeId)
             : null}
         </DragOverlay>,
-        document.body,
+        dragOverlayPortalContainer ?? document.body,
       )}
       {trashable && activeId && !columns.some((c) => c.id === activeId) ? (
         <Trash id={TRASH_ID} />
