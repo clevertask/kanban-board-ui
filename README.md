@@ -191,7 +191,7 @@ const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>(
 | `onItemRemove` | `(result: TOnItemRemoveArgs) => void`                       | `undefined`  | Callback triggered after an item has been dropped into the trashable drop zone. Provides the `itemId` and source column.                                                                              |
 | `onItemClick`  | `(itemId: UniqueIdentifier) => void`                        | `undefined`  | Callback triggered when an item on the Kanban board is clicked. Typically used to display a modal or additional item details.                                                                         |
 | `onAddColumn`  | `(item: TOnAddColumnArgs) => void`                          | `undefined`  | Callback triggered when a new column is added. Provides information about the added item (if applicable) or triggers an action when the drop zone is clicked.                                         |
-| `onColumnMove` | `({newIndex: number; columnId: UniqueIdentifier;}) => void` | `undefined`  | Callback triggered when a column is moved to a new position. Provides the column's `id` and its new index.                                                                                            |
+| `onColumnMove` | `(result: { columnId: UniqueIdentifier; newIndex: number; previousColumnId: UniqueIdentifier \| null; nextColumnId: UniqueIdentifier \| null; }) => void` | `undefined`  | Callback triggered when a column is moved to a new position. Provides the column's `id`, its new index, and the adjacent columns after the move.                                                     |
 | `onItemMove`   | `(result: MovedItemState) => void`                          | `undefined`  | Callback triggered when an item is moved to another column or its position changes within the same column. `result` can include optional `beforeItemId` and `afterItemId` for neighbor-aware ranking. |
 | `onColumnEdit` | `(columnId: UniqueIdentifier): void`                        | `undefined`  | Callback triggered when a column is clicked for editing. Provides the column's `id`.                                                                                                                  |
 | `renderItem`   | `({ item, ... }) => React.ReactElement`                     | `undefined`  | Custom render function for items. Gives full control over layout, styling, and drag handle behavior.                                                                                                  |
@@ -288,7 +288,7 @@ Moves a column before another column.
 Returns:
 
 - `columns`: updated columns state.
-- `result`: column move payload (or `null` if no movement happened), including `columnId`, `newIndex`, and `beforeItemId`/`afterItemId` neighbor references.
+- `result`: column move payload (or `null` if no movement happened), including `columnId`, `newIndex`, and `previousColumnId`/`nextColumnId` neighbor references.
 
 ### `moveColumnAfter`
 
@@ -300,7 +300,7 @@ Moves a column after another column.
 Returns:
 
 - `columns`: updated columns state.
-- `result`: column move payload (or `null` if no movement happened), including `columnId`, `newIndex`, and `beforeItemId`/`afterItemId` neighbor references.
+- `result`: column move payload (or `null` if no movement happened), including `columnId`, `newIndex`, and `previousColumnId`/`nextColumnId` neighbor references.
 
 ---
 

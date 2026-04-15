@@ -9,8 +9,8 @@ export type ItemMoveMutationResult<T> = {
 export type ColumnMoveState = {
   columnId: UniqueIdentifier;
   newIndex: number;
-  beforeItemId: UniqueIdentifier | null;
-  afterItemId: UniqueIdentifier | null;
+  previousColumnId: UniqueIdentifier | null;
+  nextColumnId: UniqueIdentifier | null;
 };
 export type ColumnMoveMutationResult<T> = {
   columns: Columns<T>;
@@ -132,10 +132,10 @@ function getAdjacentItemIds<T>(
 function getAdjacentColumnIds<T>(
   columns: Columns<T>,
   index: number,
-): Pick<ColumnMoveState, "beforeItemId" | "afterItemId"> {
+): Pick<ColumnMoveState, "previousColumnId" | "nextColumnId"> {
   return {
-    beforeItemId: columns[index - 1]?.id ?? null,
-    afterItemId: columns[index + 1]?.id ?? null,
+    previousColumnId: columns[index - 1]?.id ?? null,
+    nextColumnId: columns[index + 1]?.id ?? null,
   };
 }
 
