@@ -12,7 +12,9 @@ import {
   getFirstCollision,
   KeyboardSensor,
   MouseSensor,
+  MouseSensorOptions,
   TouchSensor,
+  TouchSensorOptions,
   Modifiers,
   useDroppable,
   UniqueIdentifier,
@@ -130,6 +132,17 @@ export type Columns<T = Item> = {
   items: Item<T>[];
   metadata?: any;
 }[];
+export type KanbanBoardDragActivationConstraints = {
+  /**
+   * Mouse activation constraint. Use null to disable the default mouse constraint.
+   */
+  mouse?: MouseSensorOptions["activationConstraint"] | null;
+
+  /**
+   * Touch activation constraint. Use null to disable the default touch constraint.
+   */
+  touch?: TouchSensorOptions["activationConstraint"] | null;
+};
 export type TOnAddColumnArgs = {
   item: Item | null;
   fromContainer: UniqueIdentifier;
@@ -170,6 +183,12 @@ export interface Props<ExtendedItem = Item> {
    * Defaults to document.body when omitted.
    */
   dragOverlayPortalContainer?: Element | DocumentFragment | null;
+  /**
+   * Optional drag activation constraints for pointer-based sensors.
+   * Defaults to a small mouse distance and a short touch hold so scroll gestures do not
+   * accidentally start a drag.
+   */
+  dragActivationConstraints?: KanbanBoardDragActivationConstraints;
   coordinateGetter?: KeyboardCoordinateGetter;
   getItemStyles?(args: {
     value: UniqueIdentifier;
@@ -204,6 +223,10 @@ export interface Props<ExtendedItem = Item> {
 export const TRASH_ID = "void";
 const PLACEHOLDER_ID = "placeholder";
 const empty: UniqueIdentifier[] = [];
+const defaultDragActivationConstraints = {
+  mouse: { distance: 6 },
+  touch: { delay: 220, tolerance: 8 },
+} satisfies Required<KanbanBoardDragActivationConstraints>;
 
 export function KanbanBoard<T = Item>({
   columns,
@@ -230,6 +253,7 @@ export function KanbanBoard<T = Item>({
   onColumnEdit,
   onItemClick,
   dragOverlayPortalContainer,
+  dragActivationConstraints,
 }: Props<T>) {
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(null);
@@ -308,9 +332,22 @@ export function KanbanBoard<T = Item>({
     [activeId, columns],
   );
   const [clonedColumns, setClonedColumns] = useState<Columns<T> | null>(null);
+  const resolvedMouseActivationConstraint =
+    dragActivationConstraints?.mouse === undefined
+      ? defaultDragActivationConstraints.mouse
+      : dragActivationConstraints.mouse;
+  const resolvedTouchActivationConstraint =
+    dragActivationConstraints?.touch === undefined
+      ? defaultDragActivationConstraints.touch
+      : dragActivationConstraints.touch;
+
   const sensors = useSensors(
-    useSensor(MouseSensor),
-    useSensor(TouchSensor),
+    useSensor(MouseSensor, {
+      activationConstraint: resolvedMouseActivationConstraint ?? undefined,
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: resolvedTouchActivationConstraint ?? undefined,
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter,
     }),
