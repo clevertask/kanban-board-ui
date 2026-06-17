@@ -8,6 +8,7 @@ A React component for rendering and managing a kanban board with drag-and-drop f
 
 - [Installation](#installation)
 - [Usage](#usage)
+- [Experimental Drag Activation Constraints](#experimental-drag-activation-constraints)
 - [Custom Components](#custom-components)
   - [Custom Item Rendering (`renderItem`)](#custom-item-rendering-renderitem)
   - [Custom Column Rendering (`renderColumn`)](#custom-column-rendering-rendercolumn)
@@ -69,6 +70,46 @@ function App() {
 ```
 
 Use `dragOverlayPortalContainer` when your custom `renderItem` or `renderColumn` relies on styles or CSS variables from a specific app subtree, such as a Radix `Theme` wrapper. When omitted, the drag overlay is portaled to `document.body`.
+
+---
+
+## Experimental Drag Activation Constraints
+
+`dragActivationConstraints` lets consumers tune when mouse and touch drags become active. The defaults are tuned to reduce accidental drag activation while scrolling on touch devices:
+
+```ts
+{
+  mouse: { distance: 6 },
+  touch: { delay: 220, tolerance: 8 },
+}
+```
+
+The prop is optional. If `mouse` or `touch` is omitted, the default for that input type is used. Pass `null` to disable a default constraint, or pass a dnd-kit activation constraint object to override it.
+
+```tsx
+<KanbanBoard
+  columns={columns}
+  setColumns={setColumns}
+  dragActivationConstraints={{
+    mouse: { distance: 8 },
+    touch: { delay: 260, tolerance: 10 },
+  }}
+  onItemMove={handleItemMove}
+/>
+```
+
+```tsx
+<KanbanBoard
+  columns={columns}
+  setColumns={setColumns}
+  dragActivationConstraints={{
+    mouse: null,
+  }}
+  onItemMove={handleItemMove}
+/>
+```
+
+This API is experimental while the package still uses the legacy `@dnd-kit/core` sensor API. It may be refined if the package migrates to the modern dnd-kit PointerSensor API.
 
 ---
 
@@ -200,6 +241,7 @@ const [columns, setColumns] = useState<Columns<{ metadata?: { foo: string } }>>(
 | `renderItem`                 | `({ item, ... }) => React.ReactElement`                                                                                                                   | `undefined`     | Custom render function for items. Gives full control over layout, styling, and drag handle behavior.                                                                                                  |
 | `renderColumn`               | `({ id, label, ... }) => React.ReactElement`                                                                                                              | `undefined`     | Custom render function for columns. Allows full control over column layout, including drag handle and header.                                                                                         |
 | `dragOverlayPortalContainer` | `Element \| DocumentFragment \| null`                                                                                                                     | `document.body` | Optional DOM container for the drag overlay portal. Useful when custom rendered items or columns must stay inside a themed or styled subtree.                                                         |
+| `dragActivationConstraints`  | `{ mouse?: MouseSensorOptions["activationConstraint"] \| null; touch?: TouchSensorOptions["activationConstraint"] \| null; }`                            | See above       | Experimental drag activation constraints for mouse and touch sensors. Omit an input type to use its default, pass `null` to disable its default, or pass a constraint object to override it.          |
 
 ---
 
