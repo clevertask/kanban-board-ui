@@ -798,10 +798,11 @@ export function KanbanBoard<T = Item>({
     if (renderColumn) {
       return renderColumn({
         id: column.id,
-        label: column.name,
+        label: column.name ?? String(column.id),
+        columnMetadata: column.metadata,
         children,
-        ref: null,
-        listeners: {},
+        ref: undefined,
+        dragListeners: {},
         attributes: {},
         style: {
           height: "100%",
@@ -809,13 +810,14 @@ export function KanbanBoard<T = Item>({
         },
         isDragging: true,
         isOver: false,
+        isColumnPlaceholder: false,
         onEdit: undefined,
       });
     }
 
     return (
       <Container
-        label={column.name}
+        label={column.name ?? String(column.id)}
         style={{
           height: "100%",
         }}

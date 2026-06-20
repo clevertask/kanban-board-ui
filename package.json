@@ -16,10 +16,22 @@
   ],
   "type": "module",
   "main": "./dist/kanban-board-ui.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/kanban-board-ui.js"
+    },
+    "./e2e": {
+      "types": "./dist/e2e/utils/index.d.ts",
+      "default": "./dist/e2e/index.js"
+    }
+  },
   "scripts": {
     "dev": "vite",
-    "build": "rm -rf dist && vite build && tsc -p tsconfig.types.json --noCheck",
+    "e2e": "playwright test",
+    "e2e:dev": "playwright test --ui",
+    "build": "rm -rf dist && vite build && vite build -c vite.test.config.ts && tsc -p tsconfig.types.json --noCheck",
     "lint": "eslint .",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
@@ -35,6 +47,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.59.1",
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
