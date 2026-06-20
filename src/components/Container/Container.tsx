@@ -12,7 +12,7 @@ export interface ContainerProps {
   style?: React.CSSProperties;
   horizontal?: boolean;
   hover?: boolean;
-  handleProps?: React.HTMLAttributes<any>;
+  handleProps?: React.ComponentPropsWithRef<typeof Handle>;
   scrollable?: boolean;
   shadow?: boolean;
   placeholder?: boolean;
@@ -21,10 +21,7 @@ export interface ContainerProps {
   onEdit?(): void;
 }
 
-export const Container = forwardRef<
-  ((node: HTMLElement | null) => void) | undefined,
-  ContainerProps
->(
+export const Container = forwardRef<HTMLElement, ContainerProps>(
   (
     {
       children,

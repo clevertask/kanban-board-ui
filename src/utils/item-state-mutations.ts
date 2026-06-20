@@ -1,4 +1,4 @@
-import { UniqueIdentifier } from "@dnd-kit/core";
+import type { UniqueIdentifier } from "@dnd-kit/abstract";
 import type { Columns, MovedItemState } from "../components/KanbanBoard";
 
 type ColumnItem<T> = Columns<T>[number]["items"][number];
