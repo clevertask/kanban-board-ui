@@ -1,12 +1,23 @@
+/* eslint-disable react-hooks/refs */
+
 import React, { useEffect } from "react";
 import classNames from "classnames";
-import type { DraggableSyntheticListeners } from "@dnd-kit/core";
-import type { Transform } from "@dnd-kit/utilities";
 
 import { Handle, Edit } from "./components";
 
 import styles from "./Item.module.css";
 import type { Item as TItem } from "../KanbanBoard";
+
+type DragListeners = {
+  ref?: React.RefCallback<Element>;
+};
+type Transform = {
+  x: number;
+  y: number;
+  scaleX?: number;
+  scaleY?: number;
+};
+
 export type RenderItemArgs<T = TItem> = {
   item: TItem<T>;
   styleLayout: React.CSSProperties;
@@ -15,8 +26,8 @@ export type RenderItemArgs<T = TItem> = {
   sorting: boolean;
   index: number | undefined;
   fadeIn: boolean;
-  dragListeners: DraggableSyntheticListeners;
-  ref: React.Ref<any>;
+  dragListeners: DragListeners;
+  ref: React.Ref<HTMLLIElement>;
   style: React.CSSProperties | undefined;
   transform: ItemProps["transform"];
   transition: ItemProps["transition"];
@@ -31,12 +42,12 @@ export interface ItemProps<ExtendedItem = TItem> {
   disabled?: boolean;
   dragging?: boolean;
   handle?: boolean;
-  handleProps?: any;
+  handleProps?: DragListeners;
   height?: number;
   index?: number;
   fadeIn?: boolean;
   transform?: Transform | null;
-  listeners?: DraggableSyntheticListeners;
+  listeners?: DragListeners;
   sorting?: boolean;
   style?: React.CSSProperties;
   transition?: string | null;
@@ -101,7 +112,7 @@ export const Item = React.memo(
           sorting: Boolean(sorting),
           index,
           fadeIn: Boolean(fadeIn),
-          dragListeners: listeners,
+          dragListeners: listeners ?? {},
           ref,
           style,
           transform,
@@ -148,7 +159,6 @@ export const Item = React.memo(
             )}
             style={style}
             data-cypress="draggable-item"
-            {...(!handle ? listeners : undefined)}
             {...props}
             tabIndex={!handle ? 0 : undefined}
           >

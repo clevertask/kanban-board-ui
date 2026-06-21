@@ -18,7 +18,7 @@ import {
   updateColumnItems,
   type ColumnMoveState,
 } from "../utils/item-state-mutations";
-import type { UniqueIdentifier } from "@dnd-kit/core";
+import type { UniqueIdentifier } from "@dnd-kit/abstract";
 
 type PreviewItemFields = { metadata?: { foo: string } };
 type PreviewColumns = Columns<PreviewItemFields>;

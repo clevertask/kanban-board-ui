@@ -1,78 +1,92 @@
-import React, { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from "react";
+/* eslint-disable react-hooks/refs */
+
+import React, { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import type { Modifiers, Sensors, UniqueIdentifier } from "@dnd-kit/abstract";
+import { CollisionPriority } from "@dnd-kit/abstract";
+import { DragDropProvider, DragOverlay, useDroppable, type DragDropManager } from "@dnd-kit/react";
 import {
-  CancelDrop,
-  closestCenter,
-  pointerWithin,
-  rectIntersection,
-  CollisionDetection,
-  DndContext,
-  DragOverlay,
-  DropAnimation,
-  getFirstCollision,
-  KeyboardSensor,
-  MouseSensor,
-  MouseSensorOptions,
-  TouchSensor,
-  TouchSensorOptions,
-  Modifiers,
-  useDroppable,
-  UniqueIdentifier,
-  useSensors,
-  useSensor,
-  MeasuringStrategy,
-  KeyboardCoordinateGetter,
-  defaultDropAnimationSideEffects,
-} from "@dnd-kit/core";
-import {
-  AnimateLayoutChanges,
-  SortableContext,
-  useSortable,
-  arrayMove,
-  defaultAnimateLayoutChanges,
-  verticalListSortingStrategy,
-  SortingStrategy,
-  horizontalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { coordinateGetter as multipleContainersCoordinateGetter } from "../utils/multipleContainerKeyboardCoordinates";
+  PointerActivationConstraints,
+  PointerSensor,
+  type DragEndEvent,
+  type DragOverEvent,
+  type DropAnimation,
+} from "@dnd-kit/dom";
+import { useSortable } from "@dnd-kit/react/sortable";
+import { move } from "@dnd-kit/helpers";
 import type { ColumnMoveState } from "../utils/item-state-mutations";
 import { Item } from "./Item";
 import { Container, ContainerProps } from "./Container";
 import { ItemProps } from "./Item/Item";
 
-const animateLayoutChanges: AnimateLayoutChanges = (args) =>
-  defaultAnimateLayoutChanges({ ...args, wasDragging: true });
+const COLUMN_GROUP = "kanban-columns";
+const COLUMN_TYPE = "kanban-column";
+const ITEM_TYPE = "kanban-item";
+
+type KanbanBoardActivationTolerance =
+  | number
+  | { x: number; y: number }
+  | { x: number }
+  | { y: number };
+type KanbanBoardDistanceActivationConstraint = {
+  distance: number;
+  tolerance?: KanbanBoardActivationTolerance;
+};
+type KanbanBoardDelayActivationConstraint = {
+  delay: number;
+  tolerance: KanbanBoardActivationTolerance;
+};
+type KanbanBoardActivationConstraint =
+  | KanbanBoardDistanceActivationConstraint
+  | KanbanBoardDelayActivationConstraint;
+type DragListeners = Partial<React.ComponentPropsWithRef<"button">>;
+type ItemStyleArgs = {
+  value: UniqueIdentifier;
+  index: number;
+  overIndex: number;
+  isDragging: boolean;
+  containerId: UniqueIdentifier;
+  isSorting: boolean;
+  isDragOverlay: boolean;
+};
 
 function DroppableContainer({
   children,
-  disabled,
+  dragDisabled,
   id,
-  items,
+  index,
   style,
   renderColumn,
   columnMetadata,
   ...props
 }: ContainerProps & {
-  disabled?: boolean;
+  dragDisabled?: boolean;
   id: UniqueIdentifier;
-  items: UniqueIdentifier[];
+  index: number;
   style?: React.CSSProperties;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   columnMetadata: any;
   renderColumn: Props["renderColumn"];
 }) {
-  const { active, attributes, isDragging, listeners, over, setNodeRef, transition, transform } =
-    useSortable({
-      id,
-      data: {
-        type: "container",
-        children: items,
-      },
-      animateLayoutChanges,
-    });
-  const isOverContainer = over
-    ? (id === over.id && active?.data.current?.type !== "container") || items.includes(over.id)
-    : false;
+  const { handleRef, isDragging, isDropTarget, ref } = useSortable({
+    id,
+    index,
+    group: COLUMN_GROUP,
+    type: COLUMN_TYPE,
+    accept: id === PLACEHOLDER_ID ? ITEM_TYPE : [COLUMN_TYPE, ITEM_TYPE],
+    disabled: {
+      draggable: Boolean(dragDisabled || id === PLACEHOLDER_ID),
+      droppable: false,
+    },
+    collisionPriority: CollisionPriority.Low,
+  });
+  const containerStyle = {
+    ...style,
+    opacity: isDragging ? 0.5 : undefined,
+  };
+  const dragListeners = {
+    ref: handleRef,
+  };
 
   return renderColumn ? (
     renderColumn({
@@ -80,33 +94,20 @@ function DroppableContainer({
       label: props.label,
       columnMetadata,
       children,
-      ref: disabled ? undefined : setNodeRef,
-      dragListeners: listeners,
-      attributes,
-      style: {
-        ...style,
-        transition,
-        transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.5 : undefined,
-      },
+      ref,
+      dragListeners,
+      attributes: {},
+      style: containerStyle,
       isDragging,
-      isOver: isOverContainer,
+      isOver: isDropTarget,
       isColumnPlaceholder: id === PLACEHOLDER_ID,
     })
   ) : (
     <Container
-      ref={disabled ? undefined : setNodeRef}
-      style={{
-        ...style,
-        transition,
-        transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.5 : undefined,
-      }}
-      hover={isOverContainer}
-      handleProps={{
-        ...attributes,
-        ...listeners,
-      }}
+      ref={ref}
+      style={containerStyle}
+      hover={isDropTarget}
+      handleProps={dragListeners}
       {...props}
     >
       {children}
@@ -115,13 +116,7 @@ function DroppableContainer({
 }
 
 const dropAnimation: DropAnimation = {
-  sideEffects: defaultDropAnimationSideEffects({
-    styles: {
-      active: {
-        opacity: "0.5",
-      },
-    },
-  }),
+  duration: 200,
 };
 
 export type BaseItem = { id: UniqueIdentifier; name?: string };
@@ -130,18 +125,19 @@ export type Columns<T = Item> = {
   id: UniqueIdentifier;
   name?: string;
   items: Item<T>[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: any;
 }[];
 export type KanbanBoardDragActivationConstraints = {
   /**
-   * Mouse activation constraint. Use null to disable the default mouse constraint.
+   * Mouse activation constraint. Omit to use the dnd-kit default.
    */
-  mouse?: MouseSensorOptions["activationConstraint"] | null;
+  mouse?: KanbanBoardActivationConstraint | null;
 
   /**
-   * Touch activation constraint. Use null to disable the default touch constraint.
+   * Touch activation constraint. Omit to use the dnd-kit default.
    */
-  touch?: TouchSensorOptions["activationConstraint"] | null;
+  touch?: KanbanBoardActivationConstraint | null;
 };
 export type TOnAddColumnArgs = {
   item: Item | null;
@@ -163,11 +159,12 @@ export interface MovedItemState {
 export type ColumnRenderArgs = {
   id: UniqueIdentifier;
   label: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   columnMetadata: any;
   children: React.ReactNode;
   ref: ((node: HTMLElement | null) => void) | undefined;
-  dragListeners: any;
-  attributes: any;
+  dragListeners: DragListeners;
+  attributes: React.HTMLAttributes<HTMLElement>;
   style?: React.CSSProperties;
   isDragging: boolean;
   isOver: boolean;
@@ -176,7 +173,7 @@ export type ColumnRenderArgs = {
 };
 export interface Props<ExtendedItem = Item> {
   adjustScale?: boolean;
-  cancelDrop?: CancelDrop;
+  cancelDrop?: unknown;
   containerStyle?: React.CSSProperties;
   /**
    * Optional DOM container for the drag overlay portal.
@@ -185,20 +182,11 @@ export interface Props<ExtendedItem = Item> {
   dragOverlayPortalContainer?: Element | DocumentFragment | null;
   /**
    * Optional drag activation constraints for pointer-based sensors.
-   * Defaults to a small mouse distance and a short touch hold so scroll gestures do not
-   * accidentally start a drag.
+   * When omitted, dnd-kit owns the default pointer activation behavior.
    */
   dragActivationConstraints?: KanbanBoardDragActivationConstraints;
-  coordinateGetter?: KeyboardCoordinateGetter;
-  getItemStyles?(args: {
-    value: UniqueIdentifier;
-    index: number;
-    overIndex: number;
-    isDragging: boolean;
-    containerId: UniqueIdentifier;
-    isSorting: boolean;
-    isDragOverlay: boolean;
-  }): React.CSSProperties;
+  coordinateGetter?: unknown;
+  getItemStyles?(args: ItemStyleArgs): React.CSSProperties;
   wrapperStyle?(args: { index: number }): React.CSSProperties;
   onItemMove(result: MovedItemState): void;
   onColumnMove?(result: ColumnMoveState): void;
@@ -211,8 +199,8 @@ export interface Props<ExtendedItem = Item> {
   handle?: boolean;
   renderItem?: ItemProps<ExtendedItem>["renderItem"];
   renderColumn?: (args: ColumnRenderArgs) => React.ReactElement;
-  strategy?: SortingStrategy;
-  modifiers?: Modifiers;
+  strategy?: unknown;
+  modifiers?: Modifiers<DragDropManager>;
   minimal?: boolean;
   trashable?: boolean;
   onItemRemove?(result: TOnItemRemoveArgs): void;
@@ -222,27 +210,18 @@ export interface Props<ExtendedItem = Item> {
 
 export const TRASH_ID = "void";
 const PLACEHOLDER_ID = "placeholder";
-const empty: UniqueIdentifier[] = [];
-const defaultDragActivationConstraints = {
-  mouse: { distance: 6 },
-  touch: { delay: 220, tolerance: 8 },
-} satisfies Required<KanbanBoardDragActivationConstraints>;
 
 export function KanbanBoard<T = Item>({
   columns,
   setColumns,
-  adjustScale = false,
-  cancelDrop,
   handle = true,
   containerStyle,
-  coordinateGetter = multipleContainersCoordinateGetter,
   getItemStyles = () => ({}),
   wrapperStyle = () => ({}),
   minimal = false,
   modifiers,
   renderItem,
   renderColumn,
-  strategy = verticalListSortingStrategy,
   trashable = false,
   onItemRemove,
   vertical = false,
@@ -256,104 +235,43 @@ export function KanbanBoard<T = Item>({
   dragActivationConstraints,
 }: Props<T>) {
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
-  const [movedItemState, setMovedItemState] = useState<MovedItemState | null>(null);
+  const [activeType, setActiveType] = useState<unknown>();
+  const clonedColumnsRef = useRef<Columns<T> | null>(null);
+  const columnsRef = useRef(columns);
+  const dragSourceContainerRef = useRef<UniqueIdentifier | null>(null);
   const onItemMoveRef = useRef(onItemMove);
+  const onColumnMoveRef = useRef(onColumnMove);
+  const onItemRemoveRef = useRef(onItemRemove);
+  const onAddColumnRef = useRef(onAddColumn);
 
-  const recentlyMovedToNewContainer = useRef(false);
-  const lastOverId = useRef<UniqueIdentifier | null>(null);
-  const isSortingContainer = activeId ? columns.some(({ id }) => id === activeId) : false;
+  useEffect(() => {
+    columnsRef.current = columns;
+  }, [columns]);
 
-  /**
-   * Custom collision detection strategy optimized for multiple containers
-   *
-   * - First, find any droppable containers intersecting with the pointer.
-   * - If there are none, find intersecting containers with the active draggable.
-   * - If there are no intersecting containers, return the last matched intersection
-   *
-   */
-  const collisionDetectionStrategy: CollisionDetection = useCallback(
-    (args) => {
-      if (activeId && columns.some(({ id }) => activeId === id)) {
-        return closestCenter({
-          ...args,
-          droppableContainers: args.droppableContainers.filter((container) =>
-            columns.some(({ id }) => id === container.id),
-          ),
-        });
-      }
+  useEffect(() => {
+    onItemMoveRef.current = onItemMove;
+  }, [onItemMove]);
 
-      // Start by finding any intersecting droppable
-      const pointerIntersections = pointerWithin(args);
-      const intersections =
-        pointerIntersections.length > 0
-          ? // If there are droppables intersecting with the pointer, return those
-            pointerIntersections
-          : rectIntersection(args);
-      let overId = getFirstCollision(intersections, "id");
+  useEffect(() => {
+    onColumnMoveRef.current = onColumnMove;
+  }, [onColumnMove]);
 
-      if (overId != null) {
-        if (overId === TRASH_ID) {
-          // If the intersecting droppable is the trash, return early
-          // Remove this if you're not using trashable functionality in your app
-          return intersections;
-        }
+  useEffect(() => {
+    onItemRemoveRef.current = onItemRemove;
+  }, [onItemRemove]);
 
-        if (columns.some(({ id }) => id === overId)) {
-          const containerItems = columns.find(({ id }) => id === overId)?.items;
+  useEffect(() => {
+    onAddColumnRef.current = onAddColumn;
+  }, [onAddColumn]);
 
-          // If a container is matched and it contains items (columns 'A', 'B', 'C')
-          if (containerItems && containerItems.length > 0) {
-            // Return the closest droppable within that container
-            overId = closestCenter({
-              ...args,
-              droppableContainers: args.droppableContainers.filter(
-                (container) =>
-                  container.id !== overId && containerItems.some(({ id }) => id === container.id),
-              ),
-            })[0]?.id;
-          }
-        }
-
-        lastOverId.current = overId;
-        return [{ id: overId }];
-      }
-
-      // When a draggable item moves to a new container, the layout may shift
-      // and the `overId` may become `null`. We manually set the cached `lastOverId`
-      // to the id of the draggable item that was moved to the new container, otherwise
-      // the previous `overId` will be returned which can cause items to incorrectly shift positions
-      if (recentlyMovedToNewContainer.current) {
-        lastOverId.current = activeId;
-      }
-
-      // If no droppable is matched, return the last match
-      return lastOverId.current ? [{ id: lastOverId.current }] : [];
-    },
-    [activeId, columns],
+  const isSortingContainer = activeType === COLUMN_TYPE;
+  const sensors = useMemo(
+    () => getConfiguredSensors(dragActivationConstraints),
+    [dragActivationConstraints],
   );
-  const [clonedColumns, setClonedColumns] = useState<Columns<T> | null>(null);
-  const resolvedMouseActivationConstraint =
-    dragActivationConstraints?.mouse === undefined
-      ? defaultDragActivationConstraints.mouse
-      : dragActivationConstraints.mouse;
-  const resolvedTouchActivationConstraint =
-    dragActivationConstraints?.touch === undefined
-      ? defaultDragActivationConstraints.touch
-      : dragActivationConstraints.touch;
 
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: resolvedMouseActivationConstraint ?? undefined,
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: resolvedTouchActivationConstraint ?? undefined,
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter,
-    }),
-  );
-  const findItem = (id: UniqueIdentifier) => {
-    for (const column of columns) {
+  const findItem = (id: UniqueIdentifier, items = columnsRef.current) => {
+    for (const column of items) {
       const item = column.items.find((item) => item.id === id);
       if (item) {
         return item;
@@ -363,12 +281,12 @@ export function KanbanBoard<T = Item>({
     return null;
   };
 
-  const findContainer = (id: UniqueIdentifier) => {
-    const column = columns.find((i) => i.id === id);
+  const findContainer = (id: UniqueIdentifier, items = columnsRef.current) => {
+    const column = items.find((i) => i.id === id);
     if (column) {
       return column.id;
     }
-    for (const column of columns) {
+    for (const column of items) {
       if (column.items.some((item) => item.id === id)) {
         return column.id;
       }
@@ -377,290 +295,153 @@ export function KanbanBoard<T = Item>({
     return null;
   };
 
-  const getIndex = (id: UniqueIdentifier) => {
-    const containerId = findContainer(id);
+  const getIndex = (id: UniqueIdentifier, items = columnsRef.current) => {
+    const containerId = findContainer(id, items);
     if (!containerId) return -1;
 
-    const column = columns.find((col) => col.id === containerId);
+    const column = items.find((col) => col.id === containerId);
     return column ? column.items.findIndex((item) => item.id === id) : -1;
   };
 
-  const getAdjacentItemIds = (items: { id: UniqueIdentifier }[], index: number) => {
-    return {
-      beforeItemId: items[index - 1]?.id ?? null,
-      afterItemId: items[index + 1]?.id ?? null,
-    };
-  };
-
-  const onDragCancel = () => {
-    if (clonedColumns) {
-      // Reset items to their original state in case items have been
-      // Dragged across containers
-      setColumns(clonedColumns);
-    }
-
+  const cleanupDragState = () => {
     setActiveId(null);
-    setClonedColumns(null);
+    setActiveType(undefined);
+    clonedColumnsRef.current = null;
+    dragSourceContainerRef.current = null;
   };
 
-  useEffect(() => {
-    requestAnimationFrame(() => {
-      recentlyMovedToNewContainer.current = false;
-    });
-  }, [columns]);
+  const commitColumns = (nextColumns: Columns<T>) => {
+    columnsRef.current = nextColumns;
+    setColumns(nextColumns);
+  };
 
-  useEffect(() => {
-    onItemMoveRef.current = onItemMove;
-  }, [onItemMove]);
-
-  useEffect(() => {
-    if (movedItemState && movedItemState.hasEnded) {
-      onItemMoveRef.current(movedItemState);
-      setMovedItemState(null);
-    }
-  }, [movedItemState]);
+  const renderOverlay = (
+    <DragOverlay dropAnimation={dropAnimation}>
+      {(source) =>
+        source.type === COLUMN_TYPE
+          ? renderContainerDragOverlay(source.id)
+          : renderSortableItemDragOverlay(source.id)
+      }
+    </DragOverlay>
+  );
 
   return (
-    <DndContext
+    <DragDropProvider
       sensors={sensors}
-      collisionDetection={collisionDetectionStrategy}
-      measuring={{
-        droppable: {
-          strategy: MeasuringStrategy.Always,
-        },
-      }}
-      onDragStart={({ active }) => {
-        setActiveId(active.id);
-        setClonedColumns(columns);
-        const activeContainer = findContainer(active.id);
-        if (activeContainer) {
-          setMovedItemState({
-            itemId: "",
-            targetColumnId: "",
-            newIndex: 0,
-            sourceColumnId: activeContainer,
-            hasEnded: false,
-          });
-        }
-      }}
-      onDragOver={({ active, over }) => {
-        const overId = over?.id;
-        if (overId == null || overId === TRASH_ID || columns.some(({ id }) => active.id === id)) {
-          return;
-        }
-
-        const overContainer = findContainer(overId);
-        const activeContainer = findContainer(active.id);
-
-        if (!overContainer || !activeContainer) {
-          return;
-        }
-
-        if (activeContainer !== overContainer) {
-          const activeColumn = columns.find(({ id }) => id === activeContainer);
-          const overColumn = columns.find(({ id }) => id === overContainer);
-
-          if (!activeColumn || !overColumn) {
-            return;
-          }
-
-          const activeItems = [...activeColumn.items];
-          const overItems = [...overColumn.items];
-
-          const overIndex = overItems.findIndex(({ id }) => id === overId);
-          const activeIndex = activeItems.findIndex(({ id }) => id === active.id);
-
-          if (activeIndex < 0) {
-            return;
-          }
-
-          let newIndex: number;
-
-          if (columns.some((i) => i.id === overId)) {
-            newIndex = overItems.length;
-          } else {
-            const isBelowOverItem =
-              over &&
-              active.rect.current.translated &&
-              active.rect.current.translated.top > over.rect.top + over.rect.height;
-
-            const modifier = isBelowOverItem ? 1 : 0;
-
-            newIndex = overIndex >= 0 ? overIndex + modifier : overItems.length;
-          }
-
-          recentlyMovedToNewContainer.current = true;
-
-          setMovedItemState(
-            (cs) =>
-              cs && {
-                ...cs,
-                itemId: active.id,
-                targetColumnId: overContainer,
-                newIndex,
-              },
-          );
-
-          // Update the items array in an array-based structure
-          setColumns((prevItems) => {
-            const updatedItems = prevItems.map((column) => {
-              if (column.id === activeContainer) {
-                return {
-                  ...column,
-                  items: column.items.filter((item) => item.id !== active.id),
-                };
-              } else if (column.id === overContainer) {
-                const newItems = [...overItems];
-                const movedItem = activeItems[activeIndex];
-
-                if (!movedItem) {
-                  return column;
-                }
-
-                newItems.splice(newIndex, 0, movedItem);
-                return {
-                  ...column,
-                  items: newItems,
-                };
-              }
-              return column;
-            });
-            return updatedItems;
-          });
-        }
-      }}
-      onDragEnd={({ active, over }) => {
-        if (columns.some((i) => i.id === active.id) && over?.id) {
-          const activeIndex = columns.map(({ id }) => id).indexOf(active.id);
-          const overIndex = columns.map(({ id }) => id).indexOf(over.id);
-
-          if (activeIndex === -1 || overIndex === -1 || activeIndex === overIndex) {
-            setActiveId(null);
-            return;
-          }
-
-          const nextColumns = arrayMove(columns, activeIndex, overIndex);
-
-          onColumnMove?.({
-            newIndex: overIndex,
-            columnId: active.id,
-            previousColumnId: nextColumns[overIndex - 1]?.id ?? null,
-            nextColumnId: nextColumns[overIndex + 1]?.id ?? null,
-          });
-          setColumns(nextColumns);
-          setActiveId(null);
-          return;
-        }
-
-        const activeContainer = findContainer(active.id);
-
-        if (!activeContainer) {
-          setActiveId(null);
-          return;
-        }
-
-        const overId = over?.id;
-
-        if (overId == null) {
-          setActiveId(null);
-          return;
-        }
-
-        if (overId === TRASH_ID) {
-          if (activeId) {
-            onItemRemove?.({
-              itemId: activeId,
-              fromContainer: activeContainer,
-            });
-          }
-          setActiveId(null);
-          return;
-        }
-
-        if (overId === PLACEHOLDER_ID) {
-          onAddColumn?.({
-            item: findItem(active.id),
-            fromContainer: activeContainer,
-          });
-          setActiveId(null);
-          return;
-        }
-
-        const overContainer = findContainer(overId);
-
-        if (overContainer) {
-          const activeIndex = columns
-            .find((i) => i.id === activeContainer)
-            ?.items.map((i) => i.id)
-            .indexOf(active.id);
-
-          const overContainerItems = columns.find((i) => i.id === overContainer)?.items || [];
-          const overIndex = columns.some((i) => i.id === overId)
-            ? overContainerItems.findIndex((item) => item.id === active.id)
-            : overContainerItems.map((i) => i.id).indexOf(overId);
-
-          if (
-            activeIndex === undefined ||
-            overIndex === undefined ||
-            activeIndex < 0 ||
-            overIndex < 0
-          ) {
-            setActiveId(null);
-            return;
-          }
-
-          if (activeIndex !== overIndex) {
-            const reorderedItems = arrayMove(overContainerItems, activeIndex, overIndex);
-
-            setMovedItemState(
-              (cs) =>
-                cs && {
-                  ...cs,
-                  itemId: active.id,
-                  newIndex: overIndex,
-                  targetColumnId: overContainer,
-                  hasEnded: true,
-                  ...getAdjacentItemIds(reorderedItems, overIndex),
-                },
-            );
-
-            setColumns((items) =>
-              items.map((item) => {
-                if (item.id === overContainer) {
-                  return {
-                    ...item,
-                    items: reorderedItems,
-                  };
-                }
-                return item;
-              }),
-            );
-            setActiveId(null);
-            return;
-          }
-
-          // It applies when an item is moved from one column to another but, for
-          // some reason, keeps the same index it had on the previous column:
-          if (activeIndex === overIndex) {
-            setMovedItemState(
-              (cs) =>
-                cs && {
-                  ...cs,
-                  itemId: active.id,
-                  newIndex: overIndex,
-                  targetColumnId: overContainer,
-                  hasEnded: true,
-                  ...getAdjacentItemIds(overContainerItems, overIndex),
-                },
-            );
-          }
-        }
-
-        setActiveId(null);
-      }}
-      cancelDrop={cancelDrop}
-      onDragCancel={onDragCancel}
       modifiers={modifiers}
+      onDragStart={(event) => {
+        const source = event.operation.source;
+
+        setActiveId(source?.id ?? null);
+        setActiveType(source?.type);
+        clonedColumnsRef.current = columnsRef.current;
+        dragSourceContainerRef.current =
+          source?.type === ITEM_TYPE ? findContainer(source.id) : null;
+      }}
+      onDragOver={(event) => {
+        const { source, target } = event.operation;
+
+        if (source?.type !== ITEM_TYPE || !target) {
+          return;
+        }
+
+        if (target.id === TRASH_ID || target.id === PLACEHOLDER_ID) {
+          return;
+        }
+
+        const nextColumns = moveItemsInColumns(columnsRef.current, event);
+        if (nextColumns !== columnsRef.current) {
+          commitColumns(nextColumns);
+        }
+      }}
+      onDragEnd={(event) => {
+        const { canceled, operation } = event;
+        const { source, target } = operation;
+
+        if (canceled) {
+          if (clonedColumnsRef.current) {
+            commitColumns(clonedColumnsRef.current);
+          }
+          cleanupDragState();
+          return;
+        }
+
+        if (!source || !target) {
+          cleanupDragState();
+          return;
+        }
+
+        if (source.type === COLUMN_TYPE) {
+          if (target.id === PLACEHOLDER_ID) {
+            cleanupDragState();
+            return;
+          }
+
+          const nextColumns = moveColumns(columnsRef.current, event);
+          const newIndex = nextColumns.findIndex((column) => column.id === source.id);
+
+          if (newIndex !== -1) {
+            commitColumns(nextColumns);
+            onColumnMoveRef.current?.({
+              columnId: source.id,
+              newIndex,
+              ...getAdjacentColumnIds(nextColumns, newIndex),
+            });
+          }
+
+          cleanupDragState();
+          return;
+        }
+
+        if (source.type === ITEM_TYPE) {
+          const sourceColumnId =
+            dragSourceContainerRef.current ??
+            findContainer(source.id, clonedColumnsRef.current ?? columnsRef.current);
+
+          if (!sourceColumnId) {
+            cleanupDragState();
+            return;
+          }
+
+          if (target.id === TRASH_ID) {
+            onItemRemoveRef.current?.({
+              itemId: source.id,
+              fromContainer: sourceColumnId,
+            });
+            cleanupDragState();
+            return;
+          }
+
+          if (target.id === PLACEHOLDER_ID) {
+            onAddColumnRef.current?.({
+              item: findItem(source.id),
+              fromContainer: sourceColumnId,
+            });
+            cleanupDragState();
+            return;
+          }
+
+          const nextColumns = moveItemsInColumns(columnsRef.current, event);
+          commitColumns(nextColumns);
+
+          const targetColumnId = findContainer(source.id, nextColumns);
+          const newIndex = getIndex(source.id, nextColumns);
+          const targetColumn = nextColumns.find((column) => column.id === targetColumnId);
+
+          if (targetColumnId && targetColumn && newIndex !== -1) {
+            onItemMoveRef.current({
+              itemId: source.id,
+              sourceColumnId,
+              targetColumnId,
+              newIndex,
+              hasEnded: true,
+              ...getAdjacentItemIds(targetColumn.items, newIndex),
+            });
+          }
+        }
+
+        cleanupDragState();
+      }}
     >
       <div
         style={{
@@ -670,87 +451,71 @@ export function KanbanBoard<T = Item>({
           gridAutoFlow: vertical ? "row" : "column",
         }}
       >
-        <SortableContext
-          items={[...columns, PLACEHOLDER_ID]}
-          strategy={vertical ? verticalListSortingStrategy : horizontalListSortingStrategy}
-        >
-          {columns.map(({ id: containerId, name, items, metadata }) => (
-            <DroppableContainer
-              key={containerId}
-              id={containerId}
-              label={name}
-              items={items.map((i) => i.id)}
-              scrollable={scrollable}
-              style={containerStyle}
-              unstyled={minimal}
-              onEdit={() => onColumnEdit?.(containerId)}
-              renderColumn={renderColumn}
-              columnMetadata={metadata}
-            >
-              <SortableContext items={items} strategy={strategy}>
-                {items.map((item, index) => {
-                  const { id: value, name } = item;
-                  return (
-                    <SortableItem<T>
-                      disabled={isSortingContainer}
-                      key={value}
-                      id={value}
-                      content={name}
-                      item={item}
-                      index={index}
-                      handle={handle}
-                      style={getItemStyles}
-                      wrapperStyle={wrapperStyle}
-                      renderItem={renderItem}
-                      containerId={containerId}
-                      getIndex={getIndex}
-                      onItemClick={() => onItemClick?.(value)}
-                    />
-                  );
-                })}
-              </SortableContext>
-            </DroppableContainer>
-          ))}
-          {!onAddColumn ? undefined : (
-            <DroppableContainer
-              id={PLACEHOLDER_ID}
-              disabled={isSortingContainer}
-              items={empty}
-              onClick={() => onAddColumn?.(null)}
-              renderColumn={renderColumn}
-              placeholder
-            >
-              + Add column
-            </DroppableContainer>
-          )}
-        </SortableContext>
+        {columns.map(({ id: containerId, name, items, metadata }, index) => (
+          <DroppableContainer
+            key={containerId}
+            id={containerId}
+            index={index}
+            label={name ?? String(containerId)}
+            scrollable={scrollable}
+            style={containerStyle}
+            unstyled={minimal}
+            dragDisabled={isSortingContainer}
+            onEdit={() => onColumnEdit?.(containerId)}
+            renderColumn={renderColumn}
+            columnMetadata={metadata}
+          >
+            {items.map((item, itemIndex) => {
+              const { id: value, name } = item;
+              return (
+                <SortableItem<T>
+                  disabled={isSortingContainer}
+                  key={value}
+                  id={value}
+                  content={name ?? String(value)}
+                  item={item}
+                  index={itemIndex}
+                  handle={handle}
+                  style={getItemStyles}
+                  wrapperStyle={wrapperStyle}
+                  renderItem={renderItem}
+                  containerId={containerId}
+                  isSorting={Boolean(activeId)}
+                  getIndex={getIndex}
+                  onItemClick={() => onItemClick?.(value)}
+                />
+              );
+            })}
+          </DroppableContainer>
+        ))}
+        {!onAddColumn ? undefined : (
+          <DroppableContainer
+            id={PLACEHOLDER_ID}
+            index={columns.length}
+            label=""
+            dragDisabled
+            onClick={() => onAddColumn?.(null)}
+            renderColumn={renderColumn}
+            columnMetadata={undefined}
+            placeholder
+          >
+            + Add column
+          </DroppableContainer>
+        )}
       </div>
-      {createPortal(
-        <DragOverlay adjustScale={adjustScale} dropAnimation={dropAnimation}>
-          {activeId
-            ? columns.some((c) => c.id === activeId)
-              ? renderContainerDragOverlay(activeId)
-              : renderSortableItemDragOverlay(activeId)
-            : null}
-        </DragOverlay>,
-        dragOverlayPortalContainer ?? document.body,
-      )}
-      {trashable && activeId && !columns.some((c) => c.id === activeId) ? (
-        <Trash id={TRASH_ID} />
-      ) : null}
-    </DndContext>
+      {createPortal(renderOverlay, dragOverlayPortalContainer ?? document.body)}
+      {trashable && activeId && activeType === ITEM_TYPE ? <Trash id={TRASH_ID} /> : null}
+    </DragDropProvider>
   );
 
   function renderSortableItemDragOverlay(id: UniqueIdentifier) {
-    const item =
-      columns.find((i) => i.id === findContainer(id))?.items.find(({ id: _id }) => _id === id) ||
-      "";
+    const item = findItem(id) || "";
     if (!item) return null;
     return (
       <Item
         value={id}
         handle={handle}
-        content={item.name}
+        content={item.name ?? String(id)}
         item={item}
         style={getItemStyles({
           containerId: findContainer(id) as UniqueIdentifier,
@@ -763,21 +528,21 @@ export function KanbanBoard<T = Item>({
         })}
         color={getColor(id)}
         wrapperStyle={wrapperStyle({ index: 0 })}
-        renderItem={renderItem}
+        renderItem={renderItem as ItemProps["renderItem"]}
         dragOverlay
       />
     );
   }
 
   function renderContainerDragOverlay(containerId: UniqueIdentifier) {
-    const column = columns.find((i) => i.id === containerId);
+    const column = columnsRef.current.find((i) => i.id === containerId);
     if (!column) return null;
 
     const children = column.items.map((item, index) => (
       <Item
         key={item.id}
         value={item.id}
-        content={item.name}
+        content={item.name ?? String(item.id)}
         handle={handle}
         style={getItemStyles({
           containerId,
@@ -791,7 +556,7 @@ export function KanbanBoard<T = Item>({
         item={item}
         color={getColor(item.id)}
         wrapperStyle={wrapperStyle({ index })}
-        renderItem={renderItem}
+        renderItem={renderItem as ItemProps["renderItem"]}
       />
     ));
 
@@ -830,6 +595,100 @@ export function KanbanBoard<T = Item>({
   }
 }
 
+function getConfiguredSensors(dragActivationConstraints?: KanbanBoardDragActivationConstraints) {
+  if (!dragActivationConstraints) {
+    return undefined;
+  }
+
+  return (defaults: Sensors<DragDropManager>): Sensors<DragDropManager> =>
+    defaults.map((sensor) =>
+      sensor === PointerSensor
+        ? PointerSensor.configure({
+            activationConstraints: (event) =>
+              getPointerActivationConstraints(event, dragActivationConstraints),
+          })
+        : sensor,
+    );
+}
+
+function getPointerActivationConstraints(
+  event: PointerEvent,
+  dragActivationConstraints: KanbanBoardDragActivationConstraints,
+) {
+  const constraint =
+    event.pointerType === "mouse"
+      ? dragActivationConstraints.mouse
+      : event.pointerType === "touch"
+        ? dragActivationConstraints.touch
+        : undefined;
+
+  if (!constraint) {
+    return undefined;
+  }
+
+  if ("distance" in constraint) {
+    return [
+      new PointerActivationConstraints.Distance({
+        value: constraint.distance,
+        tolerance: constraint.tolerance,
+      }),
+    ];
+  }
+
+  return [
+    new PointerActivationConstraints.Delay({
+      value: constraint.delay,
+      tolerance: constraint.tolerance,
+    }),
+  ];
+}
+
+function moveColumns<T>(columns: Columns<T>, event: DragEndEvent) {
+  return move(columns, event) as Columns<T>;
+}
+
+function moveItemsInColumns<T>(columns: Columns<T>, event: DragOverEvent | DragEndEvent) {
+  const movedItemsByColumn = move(getItemsByColumn(columns), event) as Record<
+    string,
+    Columns<T>[number]["items"]
+  >;
+
+  return columns.map((column) => ({
+    ...column,
+    items: movedItemsByColumn[getColumnKey(column.id)] ?? column.items,
+  }));
+}
+
+function getItemsByColumn<T>(columns: Columns<T>) {
+  return Object.fromEntries(
+    columns.map((column) => [getColumnKey(column.id), column.items]),
+  ) as Record<string, Columns<T>[number]["items"]>;
+}
+
+function getColumnKey(id: UniqueIdentifier) {
+  return String(id);
+}
+
+function getAdjacentItemIds<T>(
+  items: Columns<T>[number]["items"],
+  index: number,
+): Pick<MovedItemState, "beforeItemId" | "afterItemId"> {
+  return {
+    beforeItemId: items[index - 1]?.id ?? null,
+    afterItemId: items[index + 1]?.id ?? null,
+  };
+}
+
+function getAdjacentColumnIds<T>(
+  columns: Columns<T>,
+  index: number,
+): Pick<ColumnMoveState, "previousColumnId" | "nextColumnId"> {
+  return {
+    previousColumnId: columns[index - 1]?.id ?? null,
+    nextColumnId: columns[index + 1]?.id ?? null,
+  };
+}
+
 function getColor(id: UniqueIdentifier) {
   switch (String(id)[0]) {
     case "A":
@@ -846,13 +705,15 @@ function getColor(id: UniqueIdentifier) {
 }
 
 function Trash({ id }: { id: UniqueIdentifier }) {
-  const { setNodeRef, isOver } = useDroppable({
+  const { isDropTarget, ref } = useDroppable({
     id,
+    accept: ITEM_TYPE,
+    collisionPriority: CollisionPriority.Highest,
   });
 
   return (
     <div
-      ref={setNodeRef}
+      ref={ref}
       style={{
         display: "flex",
         alignItems: "center",
@@ -865,7 +726,7 @@ function Trash({ id }: { id: UniqueIdentifier }) {
         height: 60,
         borderRadius: 5,
         border: "1px solid",
-        borderColor: isOver ? "red" : "#DDD",
+        borderColor: isDropTarget ? "red" : "#DDD",
       }}
     >
       Drop here to delete
@@ -880,8 +741,9 @@ interface SortableItemProps<ExtendedItem> {
   handle: boolean;
   content: string;
   item: Item<ExtendedItem>;
+  isSorting: boolean;
   disabled?: boolean;
-  style(args: any): React.CSSProperties;
+  style(args: ItemStyleArgs): React.CSSProperties;
   getIndex(id: UniqueIdentifier): number;
   renderItem: Props<ExtendedItem>["renderItem"];
   onItemClick?(): void;
@@ -901,33 +763,29 @@ function SortableItem<T>({
   content,
   onItemClick,
   item,
+  isSorting,
 }: SortableItemProps<T>) {
-  const {
-    setNodeRef,
-    setActivatorNodeRef,
-    listeners,
-    isDragging,
-    isSorting,
-    over,
-    overIndex,
-    transform,
-    transition,
-  } = useSortable({
+  const { handleRef, isDragSource, isDragging, ref } = useSortable({
     id,
+    index,
+    group: containerId,
+    type: ITEM_TYPE,
+    accept: ITEM_TYPE,
+    disabled,
   });
   const mounted = useMountStatus();
   const mountedWhileDragging = isDragging && !mounted;
 
   return (
     <Item
-      ref={disabled ? undefined : setNodeRef}
+      ref={ref}
       value={id}
       content={content}
       item={item}
       dragging={isDragging}
       sorting={isSorting}
       handle={handle}
-      handleProps={handle ? { ref: setActivatorNodeRef } : undefined}
+      handleProps={handle ? { ref: handleRef } : undefined}
       index={index}
       wrapperStyle={wrapperStyle({ index })}
       style={style({
@@ -935,15 +793,16 @@ function SortableItem<T>({
         value: id,
         isDragging,
         isSorting,
-        overIndex: over ? getIndex(over.id) : overIndex,
+        overIndex: isDragSource ? getIndex(id) : -1,
         containerId,
+        isDragOverlay: false,
       })}
       color={getColor(id)}
-      transition={transition}
-      transform={transform}
+      transition={undefined}
+      transform={null}
       fadeIn={mountedWhileDragging}
-      listeners={listeners}
-      renderItem={renderItem}
+      listeners={handle ? { ref: handleRef } : {}}
+      renderItem={renderItem as ItemProps["renderItem"]}
       onItemClick={onItemClick}
     />
   );
