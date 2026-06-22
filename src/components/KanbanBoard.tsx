@@ -10,7 +10,6 @@ import {
   PointerSensor,
   type DragEndEvent,
   type DragOverEvent,
-  type DropAnimation,
 } from "@dnd-kit/dom";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { move } from "@dnd-kit/helpers";
@@ -114,10 +113,6 @@ function DroppableContainer({
     </Container>
   );
 }
-
-const dropAnimation: DropAnimation = {
-  duration: 200,
-};
 
 export type BaseItem = { id: UniqueIdentifier; name?: string };
 export type Item<ExtendedProps = BaseItem> = BaseItem & ExtendedProps;
@@ -316,7 +311,7 @@ export function KanbanBoard<T = Item>({
   };
 
   const renderOverlay = (
-    <DragOverlay dropAnimation={dropAnimation}>
+    <DragOverlay dropAnimation={null}>
       {(source) =>
         source.type === COLUMN_TYPE
           ? renderContainerDragOverlay(source.id)
