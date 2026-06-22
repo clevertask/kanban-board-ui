@@ -1,17 +1,21 @@
 import type { Locator, Page } from "@playwright/test";
 
-export function getKanbanItem(page: Page, name: string, options?: { exact?: boolean }): Locator {
-  return page.getByLabel(`Kanban item ${name}`, {
+export function getKanbanItem(
+  scope: Locator | Page,
+  name: string,
+  options?: { exact?: boolean },
+): Locator {
+  return scope.getByLabel(`Kanban item ${name}`, {
     exact: options?.exact ?? true,
   });
 }
 
 export function getKanbanItemDragHandle(
-  page: Page,
+  scope: Locator | Page,
   name: string,
   options?: { exact?: boolean },
 ): Locator {
-  return page.getByLabel(`Drag item ${name}`, {
+  return scope.getByLabel(`Drag item ${name}`, {
     exact: options?.exact ?? true,
   });
 }

@@ -10,6 +10,7 @@ import {
   PointerSensor,
   type DragEndEvent,
   type DragOverEvent,
+  type DropAnimation,
 } from "@dnd-kit/dom";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { move } from "@dnd-kit/helpers";
@@ -49,7 +50,25 @@ type ItemStyleArgs = {
   isDragOverlay: boolean;
 };
 
-function DroppableContainer({
+type DroppableContainerBaseProps = ContainerProps & {
+  dragDisabled?: boolean;
+  id: UniqueIdentifier;
+  index: number;
+  style?: React.CSSProperties;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  columnMetadata: any;
+  renderColumn: Props["renderColumn"];
+};
+
+function DroppableContainer(props: DroppableContainerBaseProps) {
+  if (props.id === PLACEHOLDER_ID) {
+    return <AddColumnDroppableContainer {...props} />;
+  }
+
+  return <SortableDroppableContainer {...props} />;
+}
+
+function SortableDroppableContainer({
   children,
   dragDisabled,
   id,
@@ -58,23 +77,15 @@ function DroppableContainer({
   renderColumn,
   columnMetadata,
   ...props
-}: ContainerProps & {
-  dragDisabled?: boolean;
-  id: UniqueIdentifier;
-  index: number;
-  style?: React.CSSProperties;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  columnMetadata: any;
-  renderColumn: Props["renderColumn"];
-}) {
+}: DroppableContainerBaseProps) {
   const { handleRef, isDragging, isDropTarget, ref } = useSortable({
     id,
     index,
     group: COLUMN_GROUP,
     type: COLUMN_TYPE,
-    accept: id === PLACEHOLDER_ID ? ITEM_TYPE : [COLUMN_TYPE, ITEM_TYPE],
+    accept: [COLUMN_TYPE, ITEM_TYPE],
     disabled: {
-      draggable: Boolean(dragDisabled || id === PLACEHOLDER_ID),
+      draggable: Boolean(dragDisabled),
       droppable: false,
     },
     collisionPriority: CollisionPriority.Low,
@@ -113,6 +124,46 @@ function DroppableContainer({
     </Container>
   );
 }
+
+function AddColumnDroppableContainer({
+  children,
+  id,
+  style,
+  renderColumn,
+  columnMetadata,
+  ...props
+}: DroppableContainerBaseProps) {
+  const { isDropTarget, ref } = useDroppable({
+    id,
+    accept: ITEM_TYPE,
+    type: COLUMN_TYPE,
+    collisionPriority: CollisionPriority.Low,
+  });
+
+  return renderColumn ? (
+    renderColumn({
+      id,
+      label: props.label,
+      columnMetadata,
+      children,
+      ref,
+      dragListeners: {},
+      attributes: {},
+      style,
+      isDragging: false,
+      isOver: isDropTarget,
+      isColumnPlaceholder: true,
+    })
+  ) : (
+    <Container ref={ref} style={style} hover={isDropTarget} handleProps={{}} {...props}>
+      {children}
+    </Container>
+  );
+}
+
+const dropAnimation: DropAnimation = {
+  duration: 200,
+};
 
 export type BaseItem = { id: UniqueIdentifier; name?: string };
 export type Item<ExtendedProps = BaseItem> = BaseItem & ExtendedProps;
@@ -311,7 +362,7 @@ export function KanbanBoard<T = Item>({
   };
 
   const renderOverlay = (
-    <DragOverlay dropAnimation={null}>
+    <DragOverlay dropAnimation={dropAnimation}>
       {(source) =>
         source.type === COLUMN_TYPE
           ? renderContainerDragOverlay(source.id)
@@ -408,10 +459,16 @@ export function KanbanBoard<T = Item>({
           }
 
           if (target.id === PLACEHOLDER_ID) {
-            onAddColumnRef.current?.({
+            if (clonedColumnsRef.current) {
+              commitColumns(clonedColumnsRef.current);
+            }
+
+            const itemToAdd = {
               item: findItem(source.id),
               fromContainer: sourceColumnId,
-            });
+            };
+
+            onAddColumnRef.current?.(itemToAdd);
             cleanupDragState();
             return;
           }
