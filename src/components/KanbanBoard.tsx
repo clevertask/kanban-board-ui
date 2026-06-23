@@ -395,7 +395,15 @@ export function KanbanBoard<T = Item>({
           return;
         }
 
+        const sourceColumnId = findContainer(source.id);
+        const targetColumnId = findContainer(target.id);
+
+        if (!sourceColumnId || !targetColumnId || sourceColumnId === targetColumnId) {
+          return;
+        }
+
         const nextColumns = moveItemsInColumns(columnsRef.current, event);
+
         if (nextColumns !== columnsRef.current) {
           commitColumns(nextColumns);
         }
@@ -473,8 +481,12 @@ export function KanbanBoard<T = Item>({
             return;
           }
 
-          const nextColumns = moveItemsInColumns(columnsRef.current, event);
-          commitColumns(nextColumns);
+          const baseColumns = clonedColumnsRef.current ?? columnsRef.current;
+          const nextColumns = moveItemsInColumns(baseColumns, event);
+
+          if (nextColumns !== columnsRef.current) {
+            commitColumns(nextColumns);
+          }
 
           const targetColumnId = findContainer(source.id, nextColumns);
           const newIndex = getIndex(source.id, nextColumns);
@@ -700,15 +712,33 @@ function moveColumns<T>(columns: Columns<T>, event: DragEndEvent) {
 }
 
 function moveItemsInColumns<T>(columns: Columns<T>, event: DragOverEvent | DragEndEvent) {
-  const movedItemsByColumn = move(getItemsByColumn(columns), event) as Record<
+  const itemsByColumn = getItemsByColumn(columns);
+  const movedItemsByColumn = move(itemsByColumn, event) as Record<
     string,
     Columns<T>[number]["items"]
   >;
 
-  return columns.map((column) => ({
-    ...column,
-    items: movedItemsByColumn[getColumnKey(column.id)] ?? column.items,
-  }));
+  if (movedItemsByColumn === itemsByColumn) {
+    return columns;
+  }
+
+  let didChange = false;
+  const nextColumns = columns.map((column) => {
+    const movedItems = movedItemsByColumn[getColumnKey(column.id)] ?? column.items;
+
+    if (movedItems === column.items) {
+      return column;
+    }
+
+    didChange = true;
+
+    return {
+      ...column,
+      items: movedItems,
+    };
+  });
+
+  return didChange ? nextColumns : columns;
 }
 
 function getItemsByColumn<T>(columns: Columns<T>) {
