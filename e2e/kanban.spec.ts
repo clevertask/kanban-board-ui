@@ -60,6 +60,30 @@ test("Item can move into an empty column after drag and drop", async ({ page }) 
   await expectItemNotInColumn(page, expect, "Create mobile modal", "To Do");
 });
 
+test("Item can move into a column created from the add-column placeholder", async ({ page }) => {
+  await page.goto("/");
+
+  await dragKanbanItem({
+    page,
+    expect,
+    from: { name: "Create mobile modal" },
+    to: { addColumnPlaceholder: true },
+  });
+
+  await expectItemInColumn(page, expect, "Create mobile modal", "Added Column 1");
+  await expectItemNotInColumn(page, expect, "Create mobile modal", "To Do");
+
+  await dragKanbanItem({
+    page,
+    expect,
+    from: { name: "Write API contract" },
+    to: { column: "Added Column 1", position: "inside" },
+  });
+
+  await expectItemInColumn(page, expect, "Write API contract", "Added Column 1");
+  await expectItemNotInColumn(page, expect, "Write API contract", "To Do");
+});
+
 test("Column can be reordered after drag and drop", async ({ page }) => {
   await page.goto("/");
 

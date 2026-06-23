@@ -3,7 +3,7 @@ import { getKanbanAddColumnPlaceholder, getKanbanColumn } from "./get-kanban-col
 import { getKanbanItem, getKanbanItemDragHandle } from "./get-kanban-item";
 
 type DragBounds = { x: number; y: number; width: number; height: number };
-type ItemTarget = { item: string; position: "before" | "after" };
+type ItemTarget = { item: string; position: "before" | "after"; column?: string };
 type ColumnTarget = { column: string; position?: "top" | "bottom" | "inside" };
 type TrashTarget = { trash: true };
 type AddColumnTarget = { addColumnPlaceholder: true };
@@ -12,8 +12,20 @@ type DragItemTarget = ItemTarget | ColumnTarget | TrashTarget | AddColumnTarget;
 export interface DragKanbanItemOptions {
   page: Page;
   expect: Expect;
-  from: { name: string };
+  from: { name: string; column?: string };
   to: DragItemTarget;
+}
+
+function getScopedKanbanItem(page: Page, name: string, column?: string): Locator {
+  const scope = column ? getKanbanColumn(page, column) : page;
+
+  return getKanbanItem(scope, name);
+}
+
+function getScopedKanbanItemDragHandle(page: Page, name: string, column?: string): Locator {
+  const scope = column ? getKanbanColumn(page, column) : page;
+
+  return getKanbanItemDragHandle(scope, name);
 }
 
 async function getBounds(locator: Locator): Promise<DragBounds> {
@@ -34,7 +46,7 @@ async function getItemDropCoordinates(
   fromBox: DragBounds,
   target: ItemTarget,
 ) {
-  const targetItem = getKanbanItem(page, target.item);
+  const targetItem = getScopedKanbanItem(page, target.item, target.column);
 
   await expect(targetItem).toBeVisible();
 
@@ -113,7 +125,7 @@ async function getDropCoordinates(
 }
 
 export async function dragKanbanItem({ page, expect, from, to }: DragKanbanItemOptions) {
-  const fromHandle = getKanbanItemDragHandle(page, from.name);
+  const fromHandle = getScopedKanbanItemDragHandle(page, from.name, from.column);
 
   await expect(fromHandle).toBeVisible();
 
@@ -135,7 +147,7 @@ export async function dragKanbanItem({ page, expect, from, to }: DragKanbanItemO
   await page.mouse.up();
   await page.waitForTimeout(120);
 
-  if (!("trash" in to)) {
+  if (!("trash" in to) && !("addColumnPlaceholder" in to)) {
     await expect(getKanbanItem(page, from.name)).toHaveCount(1);
   }
 }
