@@ -99,6 +99,7 @@ test("Item can move into a column created from the add-column placeholder", asyn
   await expectItemInColumn(page, expect, "Create mobile modal", "Added Column 1");
   await expectItemNotInColumn(page, expect, "Create mobile modal", "To Do");
   await page.evaluate(() => new Promise(requestAnimationFrame));
+  await page.waitForTimeout(120);
 
   await dragKanbanItem({
     page,

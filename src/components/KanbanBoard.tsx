@@ -4,7 +4,7 @@ import React, { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState }
 import { createPortal } from "react-dom";
 import type { Modifiers, Sensors, UniqueIdentifier } from "@dnd-kit/abstract";
 import { CollisionPriority } from "@dnd-kit/abstract";
-import { shapeIntersection } from "@dnd-kit/collision";
+import { directionBiased } from "@dnd-kit/collision";
 import { DragDropProvider, DragOverlay, useDroppable, type DragDropManager } from "@dnd-kit/react";
 import {
   PointerActivationConstraints,
@@ -88,7 +88,7 @@ function SortableDroppableContainer({
     group: COLUMN_GROUP,
     type: COLUMN_TYPE,
     accept: [COLUMN_TYPE, ITEM_TYPE],
-    collisionDetector: isEmptyColumn ? shapeIntersection : undefined,
+    collisionDetector: isEmptyColumn ? directionBiased : undefined,
     disabled: {
       draggable: Boolean(dragDisabled),
       droppable: false,
