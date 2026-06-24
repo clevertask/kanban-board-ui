@@ -22,7 +22,6 @@ import type { UniqueIdentifier } from "@dnd-kit/abstract";
 
 type PreviewItemFields = { metadata?: { foo: string } };
 type PreviewColumns = Columns<PreviewItemFields>;
-type PreviewGeometryMode = "package" | "clevertask";
 type ItemRemoveResult = {
   itemId: UniqueIdentifier;
   fromContainer: UniqueIdentifier;
@@ -75,8 +74,6 @@ function App() {
   const [lastEvent, setLastEvent] = useState<LastEvent | null>(null);
   const [nextAddedItemNumber, setNextAddedItemNumber] = useState(1);
   const [nextAddedColumnNumber, setNextAddedColumnNumber] = useState(1);
-  const [geometryMode, setGeometryMode] = useState<PreviewGeometryMode>("package");
-  const isCleverTaskGeometry = geometryMode === "clevertask";
 
   const resetBoard = useCallback(() => {
     setColumns(createBaseColumns());
@@ -264,18 +261,11 @@ function App() {
               data-kanban-column-id={String(props.id)}
               style={{
                 boxSizing: "border-box",
-                display: isCleverTaskGeometry ? "flex" : "grid",
-                flexDirection: isCleverTaskGeometry ? "column" : undefined,
-                gap: isCleverTaskGeometry ? undefined : "0.75rem",
+                display: "grid",
+                gap: "0.75rem",
                 gridAutoRows: "max-content",
-                padding: isCleverTaskGeometry ? undefined : "1rem",
-                minWidth: isCleverTaskGeometry ? "350px" : undefined,
-                width: isCleverTaskGeometry ? "350px" : "22rem",
-                margin: isCleverTaskGeometry ? "10px" : undefined,
-                border: isCleverTaskGeometry ? "1px solid rgba(0, 0, 0, .05)" : undefined,
-                borderRadius: isCleverTaskGeometry ? "12px" : undefined,
-                backgroundColor: isCleverTaskGeometry ? "#f6f6f6" : undefined,
-                overflow: isCleverTaskGeometry ? "hidden" : undefined,
+                padding: "1rem",
+                width: "22rem",
                 outline: "1px solid red",
                 ...props.style,
               }}
@@ -283,12 +273,9 @@ function App() {
               <div
                 style={{
                   alignItems: "center",
-                  backgroundColor: isCleverTaskGeometry ? "#fff" : undefined,
-                  borderBottom: isCleverTaskGeometry ? "1px solid rgba(0, 0, 0, .08)" : undefined,
                   display: "flex",
                   gap: "1rem",
                   justifyContent: "space-between",
-                  padding: isCleverTaskGeometry ? "1rem" : undefined,
                 }}
               >
                 <div>
@@ -312,15 +299,11 @@ function App() {
                 aria-label={`Items in ${label}`}
                 style={{
                   display: "grid",
-                  gap: isCleverTaskGeometry ? 0 : "1rem",
-                  flex: isCleverTaskGeometry ? "1 1 auto" : undefined,
+                  gap: "1rem",
                   listStyle: "none",
                   margin: 0,
                   minHeight: "4rem",
-                  padding: isCleverTaskGeometry ? "0.75rem" : 0,
-                  maxHeight: isCleverTaskGeometry ? "65vh" : undefined,
-                  overflowY: isCleverTaskGeometry ? "auto" : undefined,
-                  overscrollBehaviorY: isCleverTaskGeometry ? "contain" : undefined,
+                  padding: 0,
                 }}
               >
                 {props.children}
@@ -348,19 +331,12 @@ function App() {
               onClick={onItemClick}
               style={{
                 backgroundColor: dragging ? "#f0f0f0" : "#fff",
-                border: isCleverTaskGeometry ? undefined : "1px solid #ccc",
-                borderRadius: isCleverTaskGeometry ? "16px" : "8px",
-                boxShadow: isCleverTaskGeometry
-                  ? "inset 0 0 0 1px rgba(15, 23, 42, 0.04)"
-                  : undefined,
-                display: isCleverTaskGeometry ? "flex" : "grid",
-                gap: isCleverTaskGeometry ? "0.5rem" : "0.5rem",
-                alignItems: isCleverTaskGeometry ? "flex-start" : undefined,
-                margin: isCleverTaskGeometry ? "0 0 12px 0" : 0,
-                maxWidth: isCleverTaskGeometry ? "320px" : undefined,
-                padding: isCleverTaskGeometry ? "1rem 3rem 1rem 1rem" : "16px",
-                position: isCleverTaskGeometry ? "relative" : undefined,
-                width: isCleverTaskGeometry ? "100%" : undefined,
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                display: "grid",
+                gap: "0.5rem",
+                margin: 0,
+                padding: "16px",
                 ...styleLayout,
               }}
             >
@@ -373,7 +349,6 @@ function App() {
                   cursor: "grab",
                   flexShrink: 0,
                   justifySelf: "start",
-                  touchAction: isCleverTaskGeometry ? "none" : undefined,
                 }}
               >
                 Drag item
@@ -383,10 +358,6 @@ function App() {
                   data-kanban-item-label
                   style={{
                     display: "block",
-                    maxWidth: isCleverTaskGeometry ? "18rem" : undefined,
-                    overflow: isCleverTaskGeometry ? "hidden" : undefined,
-                    textOverflow: isCleverTaskGeometry ? "ellipsis" : undefined,
-                    whiteSpace: isCleverTaskGeometry ? "nowrap" : undefined,
                   }}
                 >
                   {label}
@@ -413,13 +384,6 @@ function App() {
         <button onClick={moveDoneBeforeTodo}>moveColumnBefore(done, todo)</button>
         <button onClick={moveTodoAfterInProgress}>moveColumnAfter(todo, in-progress)</button>
         <button onClick={createBlockedAndMoveTask3}>Create "Blocked" + move task-3</button>
-        <button
-          onClick={() =>
-            setGeometryMode((currentMode) => (currentMode === "package" ? "clevertask" : "package"))
-          }
-        >
-          Geometry: {geometryMode}
-        </button>
         <button onClick={resetBoard}>Reset board</button>
       </div>
       <pre
