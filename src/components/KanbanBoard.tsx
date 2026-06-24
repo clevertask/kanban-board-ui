@@ -4,7 +4,6 @@ import React, { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState }
 import { createPortal } from "react-dom";
 import type { Modifiers, Sensors, UniqueIdentifier } from "@dnd-kit/abstract";
 import { CollisionPriority } from "@dnd-kit/abstract";
-import { directionBiased } from "@dnd-kit/collision";
 import { DragDropProvider, DragOverlay, useDroppable, type DragDropManager } from "@dnd-kit/react";
 import {
   PointerActivationConstraints,
@@ -55,7 +54,6 @@ type DroppableContainerBaseProps = ContainerProps & {
   dragDisabled?: boolean;
   id: UniqueIdentifier;
   index: number;
-  itemCount: number;
   style?: React.CSSProperties;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   columnMetadata: any;
@@ -75,25 +73,22 @@ function SortableDroppableContainer({
   dragDisabled,
   id,
   index,
-  itemCount,
   style,
   renderColumn,
   columnMetadata,
   ...props
 }: DroppableContainerBaseProps) {
-  const isEmptyColumn = itemCount === 0;
   const { handleRef, isDragging, isDropTarget, ref } = useSortable({
     id,
     index,
     group: COLUMN_GROUP,
     type: COLUMN_TYPE,
     accept: [COLUMN_TYPE, ITEM_TYPE],
-    collisionDetector: isEmptyColumn ? directionBiased : undefined,
     disabled: {
       draggable: Boolean(dragDisabled),
       droppable: false,
     },
-    collisionPriority: isEmptyColumn ? CollisionPriority.High : CollisionPriority.Low,
+    collisionPriority: CollisionPriority.Normal,
   });
   const containerStyle = {
     ...style,
@@ -529,7 +524,6 @@ export function KanbanBoard<T = Item>({
             key={containerId}
             id={containerId}
             index={index}
-            itemCount={items.length}
             label={name ?? String(containerId)}
             scrollable={scrollable}
             style={containerStyle}
@@ -566,7 +560,6 @@ export function KanbanBoard<T = Item>({
           <DroppableContainer
             id={PLACEHOLDER_ID}
             index={columns.length}
-            itemCount={0}
             label=""
             dragDisabled
             onClick={() => onAddColumn?.(null)}
