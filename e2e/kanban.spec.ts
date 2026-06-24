@@ -60,6 +60,32 @@ test("Item can move into an empty column after drag and drop", async ({ page }) 
   await expectItemNotInColumn(page, expect, "Create mobile modal", "To Do");
 });
 
+test("Item can move left-to-right into an empty column near the column edge", async ({ page }) => {
+  await page.goto("/");
+
+  await dragKanbanItem({
+    page,
+    expect,
+    from: { name: "Create mobile modal" },
+    to: { column: "QA", position: "inside-left" },
+  });
+
+  await expectItemInColumn(page, expect, "Create mobile modal", "QA");
+});
+
+test("Item can move right-to-left into an empty column near the column edge", async ({ page }) => {
+  await page.goto("/");
+
+  await dragKanbanItem({
+    page,
+    expect,
+    from: { name: "Ship docs" },
+    to: { column: "QA", position: "inside-right" },
+  });
+
+  await expectItemInColumn(page, expect, "Ship docs", "QA");
+});
+
 test("Item can move into a column created from the add-column placeholder", async ({ page }) => {
   await page.goto("/");
 
@@ -72,6 +98,8 @@ test("Item can move into a column created from the add-column placeholder", asyn
 
   await expectItemInColumn(page, expect, "Create mobile modal", "Added Column 1");
   await expectItemNotInColumn(page, expect, "Create mobile modal", "To Do");
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await page.waitForTimeout(120);
 
   await dragKanbanItem({
     page,

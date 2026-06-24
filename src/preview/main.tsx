@@ -263,26 +263,38 @@ function App() {
                 boxSizing: "border-box",
                 display: "grid",
                 gap: "0.75rem",
+                gridAutoRows: "max-content",
                 padding: "1rem",
                 width: "22rem",
                 outline: "1px solid red",
                 ...props.style,
               }}
             >
-              <button
-                type="button"
-                {...props.attributes}
-                {...props.dragListeners}
-                aria-label={`Drag column ${label}`}
-                data-kanban-column-drag-handle
-                style={{ cursor: "grab", justifySelf: "start" }}
+              <div
+                style={{
+                  alignItems: "center",
+                  display: "flex",
+                  gap: "1rem",
+                  justifyContent: "space-between",
+                }}
               >
-                Drag column
-              </button>
-              <h3 data-kanban-column-label style={{ margin: 0 }}>
-                {label}
-              </h3>
-              <p style={{ margin: 0 }}>{props.columnMetadata?.columnId}</p>
+                <div>
+                  <h3 data-kanban-column-label style={{ margin: 0 }}>
+                    {label}
+                  </h3>
+                  <p style={{ margin: 0 }}>{props.columnMetadata?.columnId}</p>
+                </div>
+                <button
+                  type="button"
+                  {...props.attributes}
+                  {...props.dragListeners}
+                  aria-label={`Drag column ${label}`}
+                  data-kanban-column-drag-handle
+                  style={{ cursor: "grab", justifySelf: "start" }}
+                >
+                  Drag column
+                </button>
+              </div>
               <ul
                 aria-label={`Items in ${label}`}
                 style={{
@@ -328,19 +340,31 @@ function App() {
                 ...styleLayout,
               }}
             >
-              <strong data-kanban-item-label>{label}</strong>
-              <span>{item.metadata?.foo}</span>
-              <button type="button">Click item</button>
-
               <button
                 type="button"
                 {...dragListeners}
                 aria-label={dragOverlay ? undefined : `Drag item ${label}`}
                 data-kanban-item-drag-handle
-                style={{ cursor: "grab", justifySelf: "start" }}
+                style={{
+                  cursor: "grab",
+                  flexShrink: 0,
+                  justifySelf: "start",
+                }}
               >
                 Drag item
               </button>
+              <div style={{ minWidth: 0 }}>
+                <strong
+                  data-kanban-item-label
+                  style={{
+                    display: "block",
+                  }}
+                >
+                  {label}
+                </strong>
+                <span>{item.metadata?.foo}</span>
+                <button type="button">Click item</button>
+              </div>
             </li>
           );
         }}

@@ -4,7 +4,10 @@ import { getKanbanItem, getKanbanItemDragHandle } from "./get-kanban-item";
 
 type DragBounds = { x: number; y: number; width: number; height: number };
 type ItemTarget = { item: string; position: "before" | "after"; column?: string };
-type ColumnTarget = { column: string; position?: "top" | "bottom" | "inside" };
+type ColumnTarget = {
+  column: string;
+  position?: "top" | "bottom" | "inside" | "inside-left" | "inside-right";
+};
 type TrashTarget = { trash: true };
 type AddColumnTarget = { addColumnPlaceholder: true };
 type DragItemTarget = ItemTarget | ColumnTarget | TrashTarget | AddColumnTarget;
@@ -80,8 +83,16 @@ async function getColumnDropCoordinates(
 
   const targetBox = await getBounds(targetColumn);
   const position = "position" in target ? (target.position ?? "inside") : "inside";
-  const endX = targetBox.x + targetBox.width / 2;
+  let endX = targetBox.x + targetBox.width / 2;
   let endY = targetBox.y + targetBox.height / 2;
+
+  if (position === "inside-left") {
+    endX = targetBox.x + 24;
+  }
+
+  if (position === "inside-right") {
+    endX = targetBox.x + targetBox.width - 24;
+  }
 
   if (position === "top") {
     endY = targetBox.y + 24;
