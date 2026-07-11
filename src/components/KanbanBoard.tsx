@@ -242,7 +242,15 @@ export interface Props<ExtendedItem = Item> {
   itemCount?: number;
   columns: Columns<ExtendedItem>;
   setColumns: Dispatch<SetStateAction<Columns<ExtendedItem>>>;
+  /**
+   * Prevents columns from being used as drag sources while keeping them available as drop targets.
+   */
+  columnDragDisabled?: boolean;
   handle?: boolean;
+  /**
+   * Prevents items from being used as drag sources while keeping them available as drop targets.
+   */
+  itemDragDisabled?: boolean;
   renderItem?: ItemProps<ExtendedItem>["renderItem"];
   renderColumn?: (args: ColumnRenderArgs) => React.ReactElement;
   strategy?: unknown;
@@ -260,7 +268,9 @@ const PLACEHOLDER_ID = "placeholder";
 export function KanbanBoard<T = Item>({
   columns,
   setColumns,
+  columnDragDisabled = false,
   handle = true,
+  itemDragDisabled = false,
   containerStyle,
   getItemStyles = () => ({}),
   wrapperStyle = () => ({}),
@@ -528,7 +538,7 @@ export function KanbanBoard<T = Item>({
             scrollable={scrollable}
             style={containerStyle}
             unstyled={minimal}
-            dragDisabled={isSortingContainer}
+            dragDisabled={columnDragDisabled || isSortingContainer}
             onEdit={() => onColumnEdit?.(containerId)}
             renderColumn={renderColumn}
             columnMetadata={metadata}
@@ -537,7 +547,7 @@ export function KanbanBoard<T = Item>({
               const { id: value, name } = item;
               return (
                 <SortableItem<T>
-                  disabled={isSortingContainer}
+                  disabled={itemDragDisabled || isSortingContainer}
                   key={value}
                   id={value}
                   content={name ?? String(value)}
@@ -857,7 +867,10 @@ function SortableItem<T>({
     group: containerId,
     type: ITEM_TYPE,
     accept: ITEM_TYPE,
-    disabled,
+    disabled: {
+      draggable: Boolean(disabled),
+      droppable: false,
+    },
   });
   const mounted = useMountStatus();
   const mountedWhileDragging = isDragging && !mounted;
