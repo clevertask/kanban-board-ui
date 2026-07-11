@@ -74,12 +74,16 @@ function App() {
   const [lastEvent, setLastEvent] = useState<LastEvent | null>(null);
   const [nextAddedItemNumber, setNextAddedItemNumber] = useState(1);
   const [nextAddedColumnNumber, setNextAddedColumnNumber] = useState(1);
+  const [itemDragDisabled, setItemDragDisabled] = useState(false);
+  const [columnDragDisabled, setColumnDragDisabled] = useState(false);
 
   const resetBoard = useCallback(() => {
     setColumns(createBaseColumns());
     setLastEvent(null);
     setNextAddedItemNumber(1);
     setNextAddedColumnNumber(1);
+    setItemDragDisabled(false);
+    setColumnDragDisabled(false);
   }, []);
 
   const addNewItemToColumn = useCallback(() => {
@@ -217,8 +221,26 @@ function App() {
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
+      <label>
+        <input
+          checked={itemDragDisabled}
+          onChange={(event) => setItemDragDisabled(event.currentTarget.checked)}
+          type="checkbox"
+        />
+        Disable item dragging
+      </label>
+      <label>
+        <input
+          checked={columnDragDisabled}
+          onChange={(event) => setColumnDragDisabled(event.currentTarget.checked)}
+          type="checkbox"
+        />
+        Disable column dragging
+      </label>
       <KanbanBoard
         columns={columns}
+        columnDragDisabled={columnDragDisabled}
+        itemDragDisabled={itemDragDisabled}
         setColumns={setColumns}
         onColumnEdit={console.log}
         onItemMove={(result) => setLastEvent({ type: "itemMove", result })}
@@ -284,16 +306,18 @@ function App() {
                   </h3>
                   <p style={{ margin: 0 }}>{props.columnMetadata?.columnId}</p>
                 </div>
-                <button
-                  type="button"
-                  {...props.attributes}
-                  {...props.dragListeners}
-                  aria-label={`Drag column ${label}`}
-                  data-kanban-column-drag-handle
-                  style={{ cursor: "grab", justifySelf: "start" }}
-                >
-                  Drag column
-                </button>
+                {columnDragDisabled ? null : (
+                  <button
+                    type="button"
+                    {...props.attributes}
+                    {...props.dragListeners}
+                    aria-label={`Drag column ${label}`}
+                    data-kanban-column-drag-handle
+                    style={{ cursor: "grab", justifySelf: "start" }}
+                  >
+                    Drag column
+                  </button>
+                )}
               </div>
               <ul
                 aria-label={`Items in ${label}`}
@@ -340,19 +364,21 @@ function App() {
                 ...styleLayout,
               }}
             >
-              <button
-                type="button"
-                {...dragListeners}
-                aria-label={dragOverlay ? undefined : `Drag item ${label}`}
-                data-kanban-item-drag-handle
-                style={{
-                  cursor: "grab",
-                  flexShrink: 0,
-                  justifySelf: "start",
-                }}
-              >
-                Drag item
-              </button>
+              {itemDragDisabled ? null : (
+                <button
+                  type="button"
+                  {...dragListeners}
+                  aria-label={dragOverlay ? undefined : `Drag item ${label}`}
+                  data-kanban-item-drag-handle
+                  style={{
+                    cursor: "grab",
+                    flexShrink: 0,
+                    justifySelf: "start",
+                  }}
+                >
+                  Drag item
+                </button>
+              )}
               <div style={{ minWidth: 0 }}>
                 <strong
                   data-kanban-item-label
