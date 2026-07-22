@@ -8,6 +8,7 @@ import {
   expectItemNotInColumn,
   getKanbanColumn,
   getKanbanItem,
+  getKanbanItemDragHandle,
 } from "./utils";
 
 async function dragDirectly({
@@ -208,15 +209,29 @@ test("Drag-disabled column cannot fall back to the column content when its handl
   await expectColumnBefore(page, expect, "To Do", "Done");
 });
 
-test("Item can be removed by dragging it to trash", async ({ page }) => {
+test("Dragging an item does not render a product-specific delete target", async ({ page }) => {
   await page.goto("/");
 
-  await dragKanbanItem({
-    page,
-    expect,
-    from: { name: "Implement helpers" },
-    to: { trash: true },
-  });
+  const dragHandle = getKanbanItemDragHandle(page, "Implement helpers");
+  const dragHandleBox = await dragHandle.boundingBox();
 
-  await expect(getKanbanItem(page, "Implement helpers")).toHaveCount(0);
+  if (!dragHandleBox) {
+    throw new Error("Could not determine bounds for item drag handle");
+  }
+
+  const startX = dragHandleBox.x + dragHandleBox.width / 2;
+  const startY = dragHandleBox.y + dragHandleBox.height / 2;
+
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX + 8, startY + 8);
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+
+  await expect(page.getByText("Implement helpers", { exact: true })).toHaveCount(2);
+  await expect(page.getByText("Drop here to delete", { exact: true })).toHaveCount(0);
+
+  await page.mouse.up();
+  await page.waitForTimeout(120);
+
+  await expect(getKanbanItem(page, "Implement helpers")).toHaveCount(1);
 });

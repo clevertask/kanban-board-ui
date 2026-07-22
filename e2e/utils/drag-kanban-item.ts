@@ -8,9 +8,8 @@ type ColumnTarget = {
   column: string;
   position?: "top" | "bottom" | "inside" | "inside-left" | "inside-right";
 };
-type TrashTarget = { trash: true };
 type AddColumnTarget = { addColumnPlaceholder: true };
-type DragItemTarget = ItemTarget | ColumnTarget | TrashTarget | AddColumnTarget;
+type DragItemTarget = ItemTarget | ColumnTarget | AddColumnTarget;
 
 export interface DragKanbanItemOptions {
   page: Page;
@@ -105,19 +104,6 @@ async function getColumnDropCoordinates(
   return { x: endX, y: endY };
 }
 
-async function getTrashDropCoordinates(page: Page, expect: Expect) {
-  const target = page.getByText("Drop here to delete", { exact: true });
-
-  await expect(target).toBeVisible();
-
-  const targetBox = await getBounds(target);
-
-  return {
-    x: targetBox.x + targetBox.width / 2,
-    y: targetBox.y + targetBox.height / 2,
-  };
-}
-
 async function getDropCoordinates(
   page: Page,
   expect: Expect,
@@ -126,10 +112,6 @@ async function getDropCoordinates(
 ) {
   if ("item" in target) {
     return getItemDropCoordinates(page, expect, fromBox, target);
-  }
-
-  if ("trash" in target) {
-    return getTrashDropCoordinates(page, expect);
   }
 
   return getColumnDropCoordinates(page, expect, target);
@@ -141,7 +123,7 @@ export async function dragKanbanItem({ page, expect, from, to }: DragKanbanItemO
   await expect(fromHandle).toBeVisible();
 
   const fromBox = await getBounds(fromHandle);
-  const resolvedTarget = "trash" in to ? null : await getDropCoordinates(page, expect, fromBox, to);
+  const target = await getDropCoordinates(page, expect, fromBox, to);
   const startX = fromBox.x + fromBox.width / 2;
   const startY = fromBox.y + fromBox.height / 2;
 
@@ -150,15 +132,13 @@ export async function dragKanbanItem({ page, expect, from, to }: DragKanbanItemO
   await page.mouse.move(startX + 8, startY + 8);
   await page.evaluate(() => new Promise(requestAnimationFrame));
 
-  const target = resolvedTarget ?? (await getDropCoordinates(page, expect, fromBox, to));
-
   await page.mouse.move(target.x, target.y, { steps: 12 });
   await page.evaluate(() => new Promise(requestAnimationFrame));
   await page.waitForTimeout(120);
   await page.mouse.up();
   await page.waitForTimeout(120);
 
-  if (!("trash" in to) && !("addColumnPlaceholder" in to)) {
+  if (!("addColumnPlaceholder" in to)) {
     await expect(getKanbanItem(page, from.name)).toHaveCount(1);
   }
 }
