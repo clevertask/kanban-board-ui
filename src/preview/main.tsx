@@ -22,16 +22,11 @@ import type { UniqueIdentifier } from "@dnd-kit/abstract";
 
 type PreviewItemFields = { metadata?: { foo: string } };
 type PreviewColumns = Columns<PreviewItemFields>;
-type ItemRemoveResult = {
-  itemId: UniqueIdentifier;
-  fromContainer: UniqueIdentifier;
-};
 type LastEvent =
   | { type: "addItem"; result: { itemId: UniqueIdentifier; targetColumnId: UniqueIdentifier } }
   | { type: "addColumn"; result: TOnAddColumnArgs }
   | { type: "itemMove"; result: MovedItemState }
   | { type: "columnMove"; result: ColumnMoveState }
-  | { type: "itemRemove"; result: ItemRemoveResult }
   | { type: "programmaticMove"; label: string; result: unknown };
 
 function createBaseColumns(): PreviewColumns {
@@ -144,13 +139,6 @@ function App() {
     }
   };
 
-  const handleItemRemoval = (result: ItemRemoveResult) => {
-    setLastEvent({ type: "itemRemove", result });
-    setColumns((currentColumns) =>
-      removeColumnItem(currentColumns, result.fromContainer, result.itemId),
-    );
-  };
-
   const runProgrammaticMove = useCallback(
     (
       label: string,
@@ -247,8 +235,6 @@ function App() {
         onColumnMove={(result) => setLastEvent({ type: "columnMove", result })}
         onAddColumn={handleOnAddColumn}
         onItemClick={console.log}
-        trashable
-        onItemRemove={handleItemRemoval}
         renderColumn={(props) => {
           const label = props.label ?? String(props.id);
 

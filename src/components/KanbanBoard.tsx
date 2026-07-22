@@ -189,10 +189,6 @@ export type TOnAddColumnArgs = {
   item: Item | null;
   fromContainer: UniqueIdentifier;
 } | null;
-export type TOnItemRemoveArgs = {
-  itemId: UniqueIdentifier;
-  fromContainer: UniqueIdentifier;
-};
 export interface MovedItemState {
   itemId: UniqueIdentifier;
   newIndex: number;
@@ -256,13 +252,10 @@ export interface Props<ExtendedItem = Item> {
   strategy?: unknown;
   modifiers?: Modifiers<DragDropManager>;
   minimal?: boolean;
-  trashable?: boolean;
-  onItemRemove?(result: TOnItemRemoveArgs): void;
   scrollable?: boolean;
   vertical?: boolean;
 }
 
-export const TRASH_ID = "void";
 const PLACEHOLDER_ID = "placeholder";
 
 export function KanbanBoard<T = Item>({
@@ -278,8 +271,6 @@ export function KanbanBoard<T = Item>({
   modifiers,
   renderItem,
   renderColumn,
-  trashable = false,
-  onItemRemove,
   vertical = false,
   scrollable,
   onItemMove,
@@ -297,7 +288,6 @@ export function KanbanBoard<T = Item>({
   const dragSourceContainerRef = useRef<UniqueIdentifier | null>(null);
   const onItemMoveRef = useRef(onItemMove);
   const onColumnMoveRef = useRef(onColumnMove);
-  const onItemRemoveRef = useRef(onItemRemove);
   const onAddColumnRef = useRef(onAddColumn);
 
   useEffect(() => {
@@ -311,10 +301,6 @@ export function KanbanBoard<T = Item>({
   useEffect(() => {
     onColumnMoveRef.current = onColumnMove;
   }, [onColumnMove]);
-
-  useEffect(() => {
-    onItemRemoveRef.current = onItemRemove;
-  }, [onItemRemove]);
 
   useEffect(() => {
     onAddColumnRef.current = onAddColumn;
@@ -401,7 +387,7 @@ export function KanbanBoard<T = Item>({
           return;
         }
 
-        if (target.id === TRASH_ID || target.id === PLACEHOLDER_ID) {
+        if (target.id === PLACEHOLDER_ID) {
           return;
         }
 
@@ -463,19 +449,6 @@ export function KanbanBoard<T = Item>({
             findContainer(source.id, clonedColumnsRef.current ?? columnsRef.current);
 
           if (!sourceColumnId) {
-            cleanupDragState();
-            return;
-          }
-
-          if (target.id === TRASH_ID) {
-            if (clonedColumnsRef.current) {
-              commitColumns(clonedColumnsRef.current);
-            }
-
-            onItemRemoveRef.current?.({
-              itemId: source.id,
-              fromContainer: sourceColumnId,
-            });
             cleanupDragState();
             return;
           }
@@ -582,7 +555,6 @@ export function KanbanBoard<T = Item>({
         )}
       </div>
       {createPortal(renderOverlay, dragOverlayPortalContainer ?? document.body)}
-      {trashable && activeId && activeType === ITEM_TYPE ? <Trash id={TRASH_ID} /> : null}
     </DragDropProvider>
   );
 
@@ -798,36 +770,6 @@ function getColor(id: UniqueIdentifier) {
   }
 
   return undefined;
-}
-
-function Trash({ id }: { id: UniqueIdentifier }) {
-  const { isDropTarget, ref } = useDroppable({
-    id,
-    accept: ITEM_TYPE,
-    collisionPriority: CollisionPriority.Highest,
-  });
-
-  return (
-    <div
-      ref={ref}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        position: "fixed",
-        left: "50%",
-        marginLeft: -150,
-        bottom: 20,
-        width: 300,
-        height: 60,
-        borderRadius: 5,
-        border: "1px solid",
-        borderColor: isDropTarget ? "red" : "#DDD",
-      }}
-    >
-      Drop here to delete
-    </div>
-  );
 }
 
 interface SortableItemProps<ExtendedItem> {
