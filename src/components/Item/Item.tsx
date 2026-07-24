@@ -1,5 +1,3 @@
-/* eslint-disable react-hooks/refs */
-
 import React, { useEffect } from "react";
 import classNames from "classnames";
 
