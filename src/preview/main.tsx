@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+/* oxlint-disable react/only-export-components */
 
 import { StrictMode, useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";

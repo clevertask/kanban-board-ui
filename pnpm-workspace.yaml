@@ -1,7 +1,9 @@
 strictDepBuilds: true
 
-overrides:
-  "@types/node": 24.13.3
+updateConfig:
+  # Keep Node's types aligned with the LTS runtime selected by .nvmrc.
+  ignoreDependencies:
+    - "@types/node"
 
 allowBuilds:
   esbuild: true

@@ -1,5 +1,3 @@
-/* eslint-disable react-hooks/refs */
-
 import React, { Dispatch, SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Modifiers, Sensors, UniqueIdentifier } from "@dnd-kit/abstract";
@@ -55,7 +53,7 @@ type DroppableContainerBaseProps = ContainerProps & {
   id: UniqueIdentifier;
   index: number;
   style?: React.CSSProperties;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // oxlint-disable-next-line typescript/no-explicit-any
   columnMetadata: any;
   renderColumn: Props["renderColumn"];
 };
@@ -171,7 +169,7 @@ export type Columns<T = Item> = {
   id: UniqueIdentifier;
   name?: string;
   items: Item<T>[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // oxlint-disable-next-line typescript/no-explicit-any
   metadata?: any;
 }[];
 export type KanbanBoardDragActivationConstraints = {
@@ -201,7 +199,7 @@ export interface MovedItemState {
 export type ColumnRenderArgs = {
   id: UniqueIdentifier;
   label: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // oxlint-disable-next-line typescript/no-explicit-any
   columnMetadata: any;
   children: React.ReactNode;
   ref: ((node: HTMLElement | null) => void) | undefined;
