@@ -1,5 +1,7 @@
 strictDepBuilds: true
 
+minimumReleaseAge: 4320
+
 updateConfig:
   # Keep Node's types aligned with the LTS runtime selected by .nvmrc.
   ignoreDependencies:
