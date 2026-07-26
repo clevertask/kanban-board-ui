@@ -14,11 +14,11 @@ on:
         type: boolean
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   release:
-    uses: clevertask/clevertask-public-workflows/.github/workflows/create-release-version.yml@main
+    uses: clevertask/clevertask-public-workflows/.github/workflows/create-release-version.yml@77cd7e4a24bfc9debc74ff3082bc36c2894bb04e
     with:
       version: ${{ inputs.version }}
       prerelease: ${{ inputs.prerelease }}
