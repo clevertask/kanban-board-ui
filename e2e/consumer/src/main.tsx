@@ -3,22 +3,20 @@
 import { StrictMode, useCallback, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
+  type ColumnMoveState,
   type Columns,
   KanbanBoard,
   type MovedItemState,
-  type TOnAddColumnArgs,
-} from "../components/KanbanBoard";
-import {
-  removeColumnItem,
   moveColumnAfter,
   moveColumnBefore,
   moveItemAfter,
   moveItemBefore,
   moveItemToColumn,
+  removeColumnItem,
+  type TOnAddColumnArgs,
+  type UniqueIdentifier,
   updateColumnItems,
-  type ColumnMoveState,
-} from "../utils/item-state-mutations";
-import type { UniqueIdentifier } from "@dnd-kit/abstract";
+} from "@clevertask/kanban-board-ui";
 
 type PreviewItemFields = { metadata?: { foo: string } };
 type PreviewColumns = Columns<PreviewItemFields>;

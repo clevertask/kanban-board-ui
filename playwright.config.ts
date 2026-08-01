@@ -21,8 +21,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm dev --host 127.0.0.1 --port 5174",
+    command: "pnpm run e2e:serve",
     port: 5174,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
 });

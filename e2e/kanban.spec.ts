@@ -1,4 +1,4 @@
-import { test, expect, type Locator, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "./fixtures";
 import {
   dragKanbanColumn,
   dragKanbanItem,
@@ -42,8 +42,9 @@ async function dragDirectly({
   await page.waitForTimeout(120);
 }
 
-test.afterEach(async ({ page }) => {
-  await page.getByRole("button", { name: "Reset board", exact: true }).click();
+test("Packed board loads without browser errors", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Reset board", exact: true })).toBeVisible();
 });
 
 test("Item can be reordered within its column after drag and drop", async ({ page }) => {
