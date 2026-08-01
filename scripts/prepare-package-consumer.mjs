@@ -83,7 +83,7 @@ try {
     consumerDirectory,
     "--ignore-workspace",
     "--no-lockfile",
-    "--offline",
+    "--prefer-offline",
     "--ignore-scripts",
     "--strict-peer-dependencies",
     "--store-dir",
