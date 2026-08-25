@@ -104,6 +104,8 @@ export const Item = React.memo(
         : undefined;
 
       return renderItem ? (
+        // The ref is forwarded opaquely for the consumer to attach, not read during render.
+        // oxlint-disable-next-line react/refs
         renderItem({
           dragOverlay: Boolean(dragOverlay),
           dragging: Boolean(dragging),
