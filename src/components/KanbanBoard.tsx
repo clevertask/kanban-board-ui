@@ -97,6 +97,8 @@ function SortableDroppableContainer({
   };
 
   return renderColumn ? (
+    // The ref is forwarded opaquely for the consumer to attach, not read during render.
+    // oxlint-disable-next-line react/refs
     renderColumn({
       id,
       label: props.label,
@@ -139,6 +141,8 @@ function AddColumnDroppableContainer({
   });
 
   return renderColumn ? (
+    // The ref is forwarded opaquely for the consumer to attach, not read during render.
+    // oxlint-disable-next-line react/refs
     renderColumn({
       id,
       label: props.label,
