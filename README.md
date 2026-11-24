@@ -24,7 +24,7 @@ A React component for rendering and managing a kanban board with drag-and-drop f
   - [moveColumnBefore](#movecolumnbefore)
   - [moveColumnAfter](#movecolumnafter)
 - [Roadmap](#roadmap)
-- [Release Process](#release-process)
+- [Dependency Maintenance](#dependency-maintenance)
 - [License](#license)
 
 ---
@@ -353,6 +353,14 @@ We're constantly working to improve `@clevertask/kanban-board-ui`. Here's whatâ€
 - **API Example**: Provide a full-stack example with backend integration.
 - **E2E tests**: Ensure long-term stability and confidence in updates.
 - **User personalization**: Let users configure card layouts and visible fields.
+
+## Dependency Maintenance
+
+Dependency updates are agent-led pull requests. Review current stable releases and upstream API changes, keep the three-day `minimumReleaseAge` and build policies in `pnpm-workspace.yaml`, and use the pinned `packageManager` with the Node LTS runtime selected by `.nvmrc`. Check the latest eligible `@types/node` patch on that runtime's major separately; it is excluded from blanket updates.
+
+Before requesting review, run `pnpm install --frozen-lockfile`, `pnpm run validate:deps`, and both `pnpm audit` and `pnpm audit --prod`. The validation command checks formatting and lint, builds the library and its packed consumer, and exercises the browser regressions. Report held-back versions, audit findings, and any checks that could not run.
+
+The scheduled pnpm dependency PR generator has been retired. Pull-request CI, GitHub Actions dependency updates, and the existing release and publishing workflows remain separate. Updating dependencies does not publish a new package; consumers need a subsequent package release to adopt the result.
 
 ## License
 
