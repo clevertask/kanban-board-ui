@@ -74,6 +74,15 @@ if (storeDirectory.length === 0) {
   throw new Error("pnpm did not return a package store path");
 }
 
+// The isolated consumer install ignores this repository's workspace policy.
+const minimumReleaseAge = run(pnpmCommand, ["config", "get", "minimumReleaseAge"], {
+  captureOutput: true,
+});
+
+if (!/^\d+$/.test(minimumReleaseAge)) {
+  throw new Error("The repository must configure a numeric minimumReleaseAge");
+}
+
 run(pnpmCommand, ["pack", "--out", packageTarballPath]);
 
 try {
@@ -82,6 +91,7 @@ try {
     "--dir",
     consumerDirectory,
     "--ignore-workspace",
+    `--config.minimumReleaseAge=${minimumReleaseAge}`,
     "--no-lockfile",
     "--prefer-offline",
     "--ignore-scripts",
