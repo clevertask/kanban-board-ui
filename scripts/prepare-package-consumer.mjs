@@ -1,9 +1,8 @@
 import { spawnSync } from "node:child_process";
 import { access, readFile, realpath, rm, writeFile } from "node:fs/promises";
-import { dirname, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { relative, resolve, sep } from "node:path";
 
-const repositoryDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const repositoryDirectory = resolve(import.meta.dirname, "..");
 const consumerDirectory = resolve(repositoryDirectory, "e2e/consumer");
 const consumerManifestPath = resolve(consumerDirectory, "package.json");
 const consumerNodeModules = resolve(consumerDirectory, "node_modules");
@@ -74,6 +73,15 @@ if (storeDirectory.length === 0) {
   throw new Error("pnpm did not return a package store path");
 }
 
+// The isolated consumer install ignores this repository's workspace policy.
+const minimumReleaseAge = run(pnpmCommand, ["config", "get", "minimumReleaseAge"], {
+  captureOutput: true,
+});
+
+if (!/^\d+$/.test(minimumReleaseAge)) {
+  throw new Error("The repository must configure a numeric minimumReleaseAge");
+}
+
 run(pnpmCommand, ["pack", "--out", packageTarballPath]);
 
 try {
@@ -82,6 +90,7 @@ try {
     "--dir",
     consumerDirectory,
     "--ignore-workspace",
+    `--config.minimumReleaseAge=${minimumReleaseAge}`,
     "--no-lockfile",
     "--prefer-offline",
     "--ignore-scripts",

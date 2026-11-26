@@ -24,7 +24,6 @@ A React component for rendering and managing a kanban board with drag-and-drop f
   - [moveColumnBefore](#movecolumnbefore)
   - [moveColumnAfter](#movecolumnafter)
 - [Roadmap](#roadmap)
-- [Release Process](#release-process)
 - [License](#license)
 
 ---
